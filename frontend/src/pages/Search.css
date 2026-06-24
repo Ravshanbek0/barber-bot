@@ -1,0 +1,47 @@
+.hero {
+  background: var(--gradient-hero);
+  padding: var(--space-6) var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-soft);
+}
+.hero-title {
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  margin-top: var(--space-2);
+}
+.hero-title .accent {
+  background: var(--gradient-brass);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 6px 6px 6px 14px;
+}
+.search-bar:focus-within {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 3px var(--brass-soft);
+}
+.search-icon { color: var(--text-faint); flex: 0 0 auto; }
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-base);
+  padding: 8px 0;
+  outline: none;
+}
+.search-input::placeholder { color: var(--text-faint); }
+
+.masters-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

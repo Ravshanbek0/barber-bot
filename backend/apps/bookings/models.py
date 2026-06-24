@@ -1,0 +1,67 @@
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+
+from apps.masters.models import MasterProfile, Service
+
+
+class Booking(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Kutilmoqda"
+        CONFIRMED = "confirmed", "Tasdiqlandi"
+        IN_PROGRESS = "in_progress", "Jarayonda"
+        COMPLETED = "completed", "Yakunlandi"
+        CANCELLED = "cancelled", "Bekor qilindi"
+        NO_SHOW = "no_show", "Kelmadi"
+
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bookings"
+    )
+    master = models.ForeignKey(
+        MasterProfile, on_delete=models.CASCADE, related_name="bookings"
+    )
+    # Primary service (kept for backward compatibility / single-service views).
+    # The full set of services in one visit lives in ``services`` below.
+    service = models.ForeignKey(
+        Service, on_delete=models.SET_NULL, null=True, related_name="bookings"
+    )
+    # One appointment can bundle several services (e.g. Soqol + Soch olish);
+    # they share a single start time and the visit length is their combined
+    # duration. ``service`` mirrors the first of these.
+    services = models.ManyToManyField(Service, blank=True, related_name="combo_bookings")
+    start_at = models.DateTimeField()
+    end_at = models.DateTimeField(null=True, blank=True)
+    queue_position = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.PENDING
+    )
+    note = models.CharField(max_length=255, blank=True)
+    price_snapshot = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    reminder_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_at"]
+        indexes = [models.Index(fields=["master", "start_at"])]
+
+    def __str__(self):
+        return f"{self.client} -> {self.master} @ {self.start_at:%Y-%m-%d %H:%M}"
+
+    def selected_services(self):
+        """All services in this visit — the combo set if present, else the
+        single ``service`` (for older single-service bookings)."""
+        combo = list(self.services.all())
+        if combo:
+            return combo
+        return [self.service] if self.service else []
+
+    def total_duration_min(self):
+        svc = self.selected_services()
+        return sum(s.duration_min for s in svc) if svc else 30
+
+    def services_label(self):
+        svc = self.selected_services()
+        return ", ".join(s.name for s in svc) if svc else "Xizmat"

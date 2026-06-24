@@ -1,0 +1,103 @@
+.dash-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-2);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dash-tabs::-webkit-scrollbar { display: none; }
+.dash-tab {
+  border: none;
+  background: transparent;
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.dash-tab.active {
+  background: var(--brass-soft);
+  color: var(--brass);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+.kpi { padding: var(--space-4); text-align: center; }
+.kpi .kpi-val { font-size: var(--fs-xl); font-weight: 800; font-family: var(--font-display); }
+.kpi .kpi-label { color: var(--text-soft); font-size: 11px; margin-top: 2px; }
+
+.queue-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+.queue-pos {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brass-soft);
+  color: var(--brass);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+.md-pad { padding: var(--space-5); }
+
+/* Cover upload preview */
+.cover-preview {
+  height: 130px;
+  border-radius: var(--radius);
+  background: var(--surface-2) center/cover no-repeat;
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Portfolio editor grid */
+.portfolio-edit {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.pf-item { position: relative; }
+.pf-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.pf-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.pf-add {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-size: 28px;
+}
+.pf-add:active { background: var(--surface-3); }
