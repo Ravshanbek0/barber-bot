@@ -89,7 +89,7 @@ export default function Dashboard() {
           <strong>Profilingiz hali ko'rinmaydi</strong>
           <p className="muted mt-1" style={{ fontSize: "var(--fs-sm)" }}>
             Mijozlar topishi uchun majburiy maydonlarni to'ldiring: telefon tasdiqlash,
-            joylashuv (geolokatsiya), kamida 1 ta xizmat va ish vaqti. (Rasm va portfolio ixtiyoriy.)
+            joylashuv (geolokatsiya), kamida 1 ta xizmat va ish vaqti.
           </p>
           {publishMsg && <p className="mt-2" style={{ color: "var(--danger)", fontSize: "var(--fs-sm)" }}>{publishMsg}</p>}
           <button className="btn btn-primary btn-block mt-3" disabled={publishing} onClick={publish}>

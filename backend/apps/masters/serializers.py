@@ -3,7 +3,6 @@ from rest_framework import serializers
 from .models import (
     Discount,
     MasterProfile,
-    PortfolioItem,
     Review,
     Service,
     WorkingHours,
@@ -21,12 +20,6 @@ class ServiceSerializer(serializers.ModelSerializer):
         if value is None or value < 5:
             raise serializers.ValidationError("Davomiylik kamida 5 daqiqa bo'lishi kerak.")
         return value
-
-
-class PortfolioItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PortfolioItem
-        fields = ["id", "image", "caption", "created_at"]
 
 
 class WorkingHoursSerializer(serializers.ModelSerializer):
@@ -82,7 +75,6 @@ class MasterListSerializer(serializers.ModelSerializer):
             "address",
             "latitude",
             "longitude",
-            "cover",
             "avg_rating",
             "reviews_count",
             "accepts_walkins",
@@ -102,7 +94,6 @@ class MasterListSerializer(serializers.ModelSerializer):
 
 class MasterDetailSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True, read_only=True)
-    portfolio = PortfolioItemSerializer(many=True, read_only=True)
     working_hours = WorkingHoursSerializer(many=True, read_only=True)
     discounts = serializers.SerializerMethodField()
     reviews = ReviewSerializer(many=True, read_only=True)
@@ -114,7 +105,6 @@ class MasterDetailSerializer(serializers.ModelSerializer):
             "handle",
             "display_name",
             "bio",
-            "cover",
             "city",
             "address",
             "latitude",
@@ -125,7 +115,6 @@ class MasterDetailSerializer(serializers.ModelSerializer):
             "avg_rating",
             "reviews_count",
             "services",
-            "portfolio",
             "working_hours",
             "discounts",
             "reviews",

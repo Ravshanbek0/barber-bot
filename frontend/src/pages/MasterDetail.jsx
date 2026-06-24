@@ -215,14 +215,8 @@ export default function MasterDetail() {
 
   return (
     <div className="md">
-      <div
-        className="md-cover"
-        style={master.cover ? { backgroundImage: `url(${master.cover})` } : {}}
-      />
       <div className="md-header page-pad">
-        <div className="md-avatar">
-          {master.cover ? <img src={master.cover} alt="" /> : initials}
-        </div>
+        <div className="md-avatar">{initials}</div>
         <div className="row between wrap gap-2" style={{ width: "100%" }}>
           <div>
             <h1 className="md-name">{master.display_name}</h1>
@@ -272,17 +266,6 @@ export default function MasterDetail() {
           ))}
         </div>
       </section>
-
-      {master.portfolio?.length > 0 && (
-        <section className="page-pad mt-6">
-          <h2 className="section-title">Ishlar</h2>
-          <div className="portfolio-grid">
-            {master.portfolio.map((p) => (
-              <img key={p.id} src={p.image} alt={p.caption} />
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="page-pad mt-6">
         <h2 className="section-title">Ish vaqtlari</h2>

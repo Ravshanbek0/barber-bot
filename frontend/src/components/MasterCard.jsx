@@ -14,11 +14,7 @@ export default function MasterCard({ master }) {
   return (
     <Link to={`/m/${master.handle}`} className="mcard card">
       <div className="mcard-avatar">
-        {master.cover ? (
-          <img src={master.cover} alt={master.display_name} />
-        ) : (
-          <span>{initials}</span>
-        )}
+        <span>{initials}</span>
       </div>
 
       <div className="mcard-body">

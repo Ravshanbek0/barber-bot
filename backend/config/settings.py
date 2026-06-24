@@ -47,6 +47,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Serves collected static files (admin / DRF) in production — no separate
+    # web server or CDN needed.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -76,8 +79,19 @@ TEMPLATES = [
 ]
 
 # --- Database ---
+# Cloud hosts (Render / Railway) inject a single DATABASE_URL — prefer it when
+# present; otherwise fall back to SQLite (local) or discrete DB_* vars.
+DATABASE_URL = os.getenv("DATABASE_URL")
 DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
-if "sqlite" in DB_ENGINE:
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL, conn_max_age=600, ssl_require=True
+        )
+    }
+elif "sqlite" in DB_ENGINE:
     DATABASES = {
         "default": {
             "ENGINE": DB_ENGINE,
@@ -120,9 +134,17 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic target (served by whitenoise)
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+}
 
 # --- DRF ---
 REST_FRAMEWORK = {
@@ -149,6 +171,17 @@ SIMPLE_JWT = {
 # --- CORS ---
 CORS_ALLOWED_ORIGINS = env_list("FRONTEND_ORIGIN", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
+
+# Django admin / session POSTs over HTTPS need the origin trusted (set to the
+# backend's own https URL, comma-separated for several).
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
+
+# --- Production hardening (only when DEBUG is off) ---
+if not DEBUG:
+    # Render / most PaaS terminate TLS at a proxy and forward this header.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # --- OTP / auth providers ---
 OTP_TTL_SECONDS = int(os.getenv("OTP_TTL_SECONDS", "300"))

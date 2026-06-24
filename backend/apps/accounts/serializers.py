@@ -16,7 +16,6 @@ class UserSerializer(serializers.ModelSerializer):
             "display_name",
             "role",
             "is_master",
-            "avatar",
             "photo_url",
             "telegram_username",
             "is_phone_verified",

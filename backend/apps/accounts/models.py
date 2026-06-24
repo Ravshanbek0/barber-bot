@@ -43,7 +43,6 @@ class User(AbstractUser):
     telegram_id = models.BigIntegerField(null=True, blank=True, unique=True)
     telegram_username = models.CharField(max_length=64, blank=True)
     photo_url = models.URLField(blank=True)
-    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     is_phone_verified = models.BooleanField(default=False)
     # True once the user completes registration: phone (client) or
     # becoming a master via Telegram. False = guest (browse-only).

@@ -38,8 +38,8 @@ export default function TopBar() {
       )}
 
       <Link to="/profile" className="topbar-avatar">
-        {user?.avatar || user?.photo_url ? (
-          <img src={user.avatar || user.photo_url} alt="" />
+        {user?.photo_url ? (
+          <img src={user.photo_url} alt="" />
         ) : (
           <span>{initial}</span>
         )}

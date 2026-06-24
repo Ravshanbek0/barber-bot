@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
@@ -8,12 +8,10 @@ import PhoneVerify from "../components/PhoneVerify.jsx";
 export default function Profile() {
   const { user, logout, patchUser } = useAuth();
   const navigate = useNavigate();
-  const fileRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
   const [becoming, setBecoming] = useState(false);
   const [needVerify, setNeedVerify] = useState(false);
   const initial = (user?.display_name || "U")[0]?.toUpperCase();
-  const photo = user?.avatar || user?.photo_url;
+  const photo = user?.photo_url;
 
   const doBecome = async () => {
     setBecoming(true);
@@ -32,34 +30,16 @@ export default function Profile() {
     doBecome();
   };
 
-  const uploadAvatar = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("avatar", file);
-    try {
-      const { data } = await api.patch("/auth/me/", fd);
-      patchUser({ avatar: data.avatar });
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="page">
       <div className="card card-pad center">
-        <button
+        <div
           className="avatar"
-          style={{ width: 84, height: 84, fontSize: 32, margin: "0 auto", border: "none" }}
-          onClick={() => fileRef.current?.click()}
+          style={{ width: 84, height: 84, fontSize: 32, margin: "0 auto" }}
         >
           {photo ? <img src={photo} alt="" /> : initial}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => uploadAvatar(e.target.files?.[0])} />
-        <p className="faint mt-2" style={{ fontSize: "var(--fs-xs)" }}>
-          {uploading ? "Yuklanmoqda…" : "Rasmni o'zgartirish uchun bosing"}
-        </p>
-        <h2 className="mt-2" style={{ fontFamily: "var(--font-sans)" }}>{user?.display_name}</h2>
+        </div>
+        <h2 className="mt-3" style={{ fontFamily: "var(--font-sans)" }}>{user?.display_name}</h2>
         {user?.telegram_username && <p className="muted">@{user.telegram_username}</p>}
         <div className="row gap-2 mt-3" style={{ justifyContent: "center" }}>
           <span className={`badge ${user?.is_master ? "badge-brass" : ""}`}>

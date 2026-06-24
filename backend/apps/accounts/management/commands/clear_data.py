@@ -14,7 +14,6 @@ from apps.chat.models import Conversation, Message
 from apps.masters.models import (
     Discount,
     MasterProfile,
-    PortfolioItem,
     Review,
     Service,
     WorkingHours,
@@ -38,7 +37,6 @@ class Command(BaseCommand):
             Conversation,
             Booking,
             Review,
-            PortfolioItem,
             Discount,
             WorkingHours,
             Service,

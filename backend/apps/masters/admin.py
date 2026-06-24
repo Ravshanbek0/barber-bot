@@ -3,7 +3,6 @@ from django.contrib import admin
 from .models import (
     Discount,
     MasterProfile,
-    PortfolioItem,
     Review,
     Service,
     WorkingHours,
@@ -28,4 +27,4 @@ class MasterProfileAdmin(admin.ModelAdmin):
     inlines = [ServiceInline, WorkingHoursInline]
 
 
-admin.site.register([PortfolioItem, Service, WorkingHours, Discount, Review])
+admin.site.register([Service, WorkingHours, Discount, Review])

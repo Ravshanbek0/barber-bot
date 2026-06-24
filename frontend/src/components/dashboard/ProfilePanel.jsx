@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client";
 import { getPosition, reverseGeocode } from "../../lib/geo";
 
@@ -14,12 +14,9 @@ export default function ProfilePanel({ profile, onChange }) {
   });
   const [service, setService] = useState({ name: "", price: "", duration_min: 30 });
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locMsg, setLocMsg] = useState("");
   const hasLocation = profile.latitude != null && profile.longitude != null;
-  const coverRef = useRef(null);
-  const portfolioRef = useRef(null);
 
   const saveProfile = async () => {
     setSaving(true);
@@ -45,38 +42,6 @@ export default function ProfilePanel({ profile, onChange }) {
     }
   };
 
-  const uploadCover = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("cover", file);
-    try {
-      await api.patch(`/masters/${profile.handle}/`, fd);
-      onChange?.();
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const addPortfolio = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("image", file);
-    fd.append("master", profile.id);
-    try {
-      await api.post("/portfolio/", fd);
-      onChange?.();
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removePortfolio = async (id) => {
-    await api.delete(`/portfolio/${id}/`);
-    onChange?.();
-  };
-
   const addService = async () => {
     if (!service.name || !service.price) return;
     // A real visit length is required — fall back to 30 min if left blank/zero
@@ -94,49 +59,6 @@ export default function ProfilePanel({ profile, onChange }) {
 
   return (
     <div className="stack gap-4">
-      {/* Cover */}
-      <div className="card card-pad">
-        <h3>Muqova rasmi</h3>
-        <div
-          className="cover-preview mt-3"
-          style={profile.cover ? { backgroundImage: `url(${profile.cover})` } : {}}
-          onClick={() => coverRef.current?.click()}
-        >
-          {!profile.cover && <span className="faint">+ Muqova yuklash</span>}
-        </div>
-        <input
-          ref={coverRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => uploadCover(e.target.files?.[0])}
-        />
-        <button className="btn btn-ghost btn-sm mt-3" disabled={uploading} onClick={() => coverRef.current?.click()}>
-          {uploading ? "Yuklanmoqda…" : "Rasm tanlash"}
-        </button>
-      </div>
-
-      {/* Portfolio — Instagram-style grid */}
-      <div className="card card-pad">
-        <h3>Ishlar (portfolio)</h3>
-        <div className="portfolio-edit mt-3">
-          {(profile.portfolio || []).map((p) => (
-            <div key={p.id} className="pf-item">
-              <img src={p.image} alt={p.caption} />
-              <button className="pf-del" onClick={() => removePortfolio(p.id)} aria-label="O'chirish">×</button>
-            </div>
-          ))}
-          <button className="pf-add" disabled={uploading} onClick={() => portfolioRef.current?.click()}>+</button>
-        </div>
-        <input
-          ref={portfolioRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => addPortfolio(e.target.files?.[0])}
-        />
-      </div>
-
       {/* Profile fields */}
       <div className="card card-pad">
         <h3>Profil</h3>

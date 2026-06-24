@@ -14,7 +14,6 @@ class MasterProfile(models.Model):
     handle = models.SlugField(max_length=40, unique=True)  # @username style
     display_name = models.CharField(max_length=120)
     bio = models.TextField(blank=True)
-    cover = models.ImageField(upload_to="covers/", null=True, blank=True)
     city = models.CharField(max_length=80, blank=True)
     address = models.CharField(max_length=255, blank=True)
     latitude = models.FloatField(null=True, blank=True)
@@ -43,20 +42,6 @@ class MasterProfile(models.Model):
         self.reviews_count = count
         self.avg_rating = round(sum(r.rating for r in agg) / count, 2) if count else 0
         self.save(update_fields=["reviews_count", "avg_rating"])
-
-
-class PortfolioItem(models.Model):
-    """A photo on the master's Instagram-like grid."""
-
-    master = models.ForeignKey(
-        MasterProfile, on_delete=models.CASCADE, related_name="portfolio"
-    )
-    image = models.ImageField(upload_to="portfolio/")
-    caption = models.CharField(max_length=200, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-created_at"]
 
 
 class Service(models.Model):

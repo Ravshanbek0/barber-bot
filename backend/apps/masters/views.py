@@ -16,7 +16,6 @@ def haversine_km(lat1, lng1, lat2, lng2):
 from .models import (
     Discount,
     MasterProfile,
-    PortfolioItem,
     Review,
     Service,
     WorkingHours,
@@ -26,7 +25,6 @@ from .serializers import (
     DiscountSerializer,
     MasterDetailSerializer,
     MasterListSerializer,
-    PortfolioItemSerializer,
     ReviewSerializer,
     ServiceSerializer,
     WorkingHoursSerializer,
@@ -37,7 +35,7 @@ class MasterViewSet(viewsets.ModelViewSet):
     queryset = (
         MasterProfile.objects.filter(is_active=True)
         .select_related("user")
-        .prefetch_related("services", "portfolio", "working_hours", "discounts", "reviews")
+        .prefetch_related("services", "working_hours", "discounts", "reviews")
     )
     permission_classes = [IsOwnerMasterOrReadOnly]
     lookup_field = "handle"
@@ -123,7 +121,6 @@ class MasterViewSet(viewsets.ModelViewSet):
         """Go live: requires verified phone + required profile fields filled.
 
         Required: phone, display_name, city, >=1 service, working hours.
-        Optional (not required): avatar, portfolio.
         """
         profile = MasterProfile.objects.filter(user=request.user).first()
         if not profile:
@@ -239,9 +236,3 @@ class DiscountViewSet(_OwnedBase):
         return Discount.objects.select_related("master").all()
 
 
-class PortfolioViewSet(_OwnedBase):
-    serializer_class = PortfolioItemSerializer
-    filterset_fields = ["master"]
-
-    def get_queryset(self):
-        return PortfolioItem.objects.select_related("master").all()
