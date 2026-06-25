@@ -115,13 +115,31 @@ class Command(BaseCommand):
             return
 
         if text.startswith("/start"):
+            base = url.rstrip("/")
+            # Deep link `t.me/<bot>?start=<handle>` — a master shares this so a
+            # client lands straight on their booking page.
+            parts = text.split(maxsplit=1)
+            param = parts[1].strip() if len(parts) > 1 else ""
+            if param:
+                master = self._master_by_handle(param)
+                if master:
+                    self._call(token, "sendMessage", {
+                        "chat_id": chat_id,
+                        "text": f"💈 <b>{master.display_name}</b> — bron qilish uchun tugmani bosing.",
+                        "parse_mode": "HTML",
+                        "reply_markup": {"inline_keyboard": [[
+                            {"text": f"📅 {master.display_name} — bron qilish",
+                             "web_app": {"url": f"{base}/m/{master.handle}"}}
+                        ]]},
+                    })
+                    return
+
             recents = self._recent_masters(chat_id)
             rows = [[{"text": "💈 Ilovani ochish", "web_app": {"url": url}}]]
             # Masters get a one-tap shortcut to manage their incoming bookings.
             if self._is_master(chat_id):
                 rows.append([{"text": "📋 Bronlar", "callback_data": "bookings"}])
             # One-tap re-booking with masters the user has visited before.
-            base = url.rstrip("/")
             for handle, name in recents:
                 rows.append([
                     {"text": f"↻ {name}", "web_app": {"url": f"{base}/m/{handle}"}}
@@ -259,6 +277,12 @@ class Command(BaseCommand):
         from apps.masters.models import MasterProfile
 
         return MasterProfile.objects.filter(user__telegram_id=tg_id).exists()
+
+    def _master_by_handle(self, handle):
+        """Look up a master by their @handle (for share deep links)."""
+        from apps.masters.models import MasterProfile
+
+        return MasterProfile.objects.filter(handle=handle).first()
 
     def _send_master_bookings(self, token, chat_id, from_id):
         """Send the master their active bookings, each with action buttons

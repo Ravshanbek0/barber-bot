@@ -6,8 +6,9 @@ from .models import Booking
 
 
 class BookingSerializer(serializers.ModelSerializer):
-    client_name = serializers.CharField(source="client.display_name", read_only=True)
-    client_phone = serializers.CharField(source="client.phone", read_only=True)
+    # Walk-ins have no account, so fall back to the master-typed walk-in details.
+    client_name = serializers.SerializerMethodField()
+    client_phone = serializers.SerializerMethodField()
     master_name = serializers.CharField(source="master.display_name", read_only=True)
     master_handle = serializers.CharField(source="master.handle", read_only=True)
     # Combined label / total length across every service in the visit.
@@ -24,7 +25,15 @@ class BookingSerializer(serializers.ModelSerializer):
     # client UI hide the "Baholash" button once a rating has been submitted.
     reviewed = serializers.SerializerMethodField()
 
+    def get_client_name(self, obj):
+        return obj.client_label()
+
+    def get_client_phone(self, obj):
+        return obj.client.phone if obj.client_id else (obj.walk_in_phone or None)
+
     def get_reviewed(self, obj):
+        if not obj.client_id:
+            return False
         return Review.objects.filter(
             master_id=obj.master_id, author_id=obj.client_id
         ).exists()
@@ -48,6 +57,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "client",
             "client_name",
             "client_phone",
+            "walk_in_name",
             "master",
             "master_name",
             "master_handle",

@@ -3,13 +3,14 @@ from decimal import Decimal
 
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.masters.models import MasterProfile
+from apps.masters.models import MasterProfile, Service
 
 from .models import Booking
 from .serializers import BookingSerializer
@@ -125,6 +126,53 @@ class BookingViewSet(viewsets.ModelViewSet):
             for b in _active_bookings_for_day(master, day_start)
         ]
         return Response(busy)
+
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def walkin(self, request):
+        """Master adds an offline (walk-in) client to today's queue in one tap.
+
+        Minimal + fast: name and services are optional, time defaults to now.
+        No client account is created — the booking is confirmed immediately and
+        slot/working-hour checks are skipped (the master is in control).
+        """
+        master = MasterProfile.objects.filter(user=request.user).first()
+        if not master:
+            return Response({"detail": "Faqat ustalar uchun"}, status=403)
+
+        name = (request.data.get("name") or "").strip()
+        phone = (request.data.get("phone") or "").strip()
+        service_ids = request.data.get("service_ids") or []
+        services = list(Service.objects.filter(id__in=service_ids, master=master))
+
+        start_raw = request.data.get("start_at")
+        start_at = parse_datetime(start_raw) if start_raw else None
+        if start_at is None:
+            start_at = timezone.now()
+        elif timezone.is_naive(start_at):
+            start_at = timezone.make_aware(start_at)
+
+        total_min = sum(s.duration_min for s in services) or DEFAULT_SLOT_MIN
+        end_at = start_at + timedelta(minutes=total_min)
+        price = sum((s.price for s in services), Decimal("0")) if services else None
+
+        day_start = start_at.replace(hour=0, minute=0, second=0, microsecond=0)
+        active_count = _active_bookings_for_day(master, day_start).count()
+
+        booking = Booking.objects.create(
+            client=None,
+            master=master,
+            walk_in_name=name,
+            walk_in_phone=phone,
+            service=services[0] if services else None,
+            start_at=start_at,
+            end_at=end_at,
+            price_snapshot=price,
+            status=Booking.Status.CONFIRMED,
+            queue_position=active_count + 1,
+        )
+        if services:
+            booking.services.set(services)
+        return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
     def _is_master_of(self, booking):
         return booking.master.user_id == self.request.user.id

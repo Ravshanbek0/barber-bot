@@ -44,7 +44,7 @@ def booking_text(booking, *, header="Bron"):
     emoji = STATUS_EMOJI.get(booking.status, "•")
     return (
         f"{emoji} <b>{header}</b>\n"
-        f"{booking.client.display_name} · {service}\n"
+        f"{booking.client_label()} · {service}\n"
         f"🗓 {when_str(booking)}\n"
         f"Holat: {booking.get_status_display()}"
     )

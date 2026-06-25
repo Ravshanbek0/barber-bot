@@ -72,8 +72,10 @@ def _dispatch_notifications(booking_pk, created):
     service = instance.services_label()
     when = _when(instance)
 
-    if created:
+    if created and instance.client_id:
         # Master gets the booking with inline action buttons (Tasdiqlash / Bekor).
+        # Skipped for walk-ins: the master added it themselves and there is no
+        # client account to notify.
         send_message(
             master_tg,
             booking_text(instance, header="Yangi bron"),

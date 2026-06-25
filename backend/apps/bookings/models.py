@@ -14,9 +14,17 @@ class Booking(models.Model):
         CANCELLED = "cancelled", "Bekor qilindi"
         NO_SHOW = "no_show", "Kelmadi"
 
+    # Null for walk-ins (offline clients the master adds manually — no account).
     client = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bookings"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="bookings",
+        null=True,
+        blank=True,
     )
+    # Walk-in client details (used only when ``client`` is null).
+    walk_in_name = models.CharField(max_length=120, blank=True)
+    walk_in_phone = models.CharField(max_length=20, blank=True)
     master = models.ForeignKey(
         MasterProfile, on_delete=models.CASCADE, related_name="bookings"
     )
@@ -48,7 +56,18 @@ class Booking(models.Model):
         indexes = [models.Index(fields=["master", "start_at"])]
 
     def __str__(self):
-        return f"{self.client} -> {self.master} @ {self.start_at:%Y-%m-%d %H:%M}"
+        return f"{self.client_label()} -> {self.master} @ {self.start_at:%Y-%m-%d %H:%M}"
+
+    def client_label(self):
+        """Display name for the client — the account holder, or the walk-in
+        name the master typed, or a generic fallback."""
+        if self.client_id:
+            return self.client.display_name
+        return self.walk_in_name or "Mijoz"
+
+    @property
+    def is_walk_in(self):
+        return self.client_id is None
 
     def selected_services(self):
         """All services in this visit — the combo set if present, else the

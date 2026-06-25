@@ -111,7 +111,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-4">
-        {tab === "queue" && <QueuePanel handle={profile.handle} version={queueVersion} />}
+        {tab === "queue" && <QueuePanel handle={profile.handle} services={profile.services} version={queueVersion} />}
         {tab === "hours" && <HoursPanel profile={profile} onChange={loadProfile} />}
         {tab === "discounts" && <DiscountPanel profile={profile} onChange={loadProfile} />}
         {tab === "profile" && <ProfilePanel profile={profile} onChange={loadProfile} />}
