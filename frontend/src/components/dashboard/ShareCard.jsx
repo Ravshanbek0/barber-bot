@@ -2,7 +2,9 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { tg } from "../../lib/telegram";
 
-const BOT = import.meta.env.VITE_TELEGRAM_BOT || "";
+// Falls back to the known bot so the link/QR still render when the host
+// (e.g. Vercel) hasn't set VITE_TELEGRAM_BOT — the .env file is gitignored.
+const BOT = import.meta.env.VITE_TELEGRAM_BOT || "barberC_bot";
 
 /**
  * The master's personal booking link + QR. Sharing it (or printing the QR in

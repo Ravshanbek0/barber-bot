@@ -34,8 +34,31 @@ _MASTER_ACTIONS = {
 }
 
 
+# Client-facing status headline for each status — one evolving card per booking.
+CLIENT_STATUS_HEADERS = {
+    Booking.Status.PENDING: "🕐 So'rovingiz yuborildi",
+    Booking.Status.CONFIRMED: "✅ Broningiz tasdiqlandi",
+    Booking.Status.IN_PROGRESS: "✂️ Navbatingiz keldi",
+    Booking.Status.COMPLETED: "🎉 Xizmat yakunlandi. Rahmat!",
+    Booking.Status.CANCELLED: "❌ Broningiz bekor qilindi",
+    Booking.Status.NO_SHOW: "⚠️ Siz belgilangan vaqtda kelmadingiz",
+}
+
+
 def when_str(booking):
     return timezone.localtime(booking.start_at).strftime("%d.%m %H:%M")
+
+
+def client_card(booking):
+    """Client-facing booking card. The same message is edited as the status
+    changes, so the client sees one card per booking instead of many."""
+    head = CLIENT_STATUS_HEADERS.get(booking.status, "Bron")
+    extra = "\nUsta tasdiqlashini kuting." if booking.status == Booking.Status.PENDING else ""
+    return (
+        f"{head}\n"
+        f"{booking.master.display_name} · {booking.services_label()}\n"
+        f"🗓 {when_str(booking)}{extra}"
+    )
 
 
 def booking_text(booking, *, header="Bron"):
