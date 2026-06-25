@@ -59,6 +59,7 @@ export default function QueuePanel({ handle, services = [], version }) {
                   <strong>
                     {b.client_name}
                     {!b.client && <span className="badge" style={{ fontSize: "var(--fs-xs)", marginLeft: 8 }}>jonli</span>}
+                    {b.is_overdue && <span className="badge badge-danger" style={{ fontSize: "var(--fs-xs)", marginLeft: 8 }}>⏰ vaqti o'tdi</span>}
                   </strong>
                   <span className="muted" style={{ fontSize: "var(--fs-sm)" }}>
                     {fmtTime(b.start_at)} · {b.service_name || "Xizmat"} · {money(b.price_snapshot)} so'm

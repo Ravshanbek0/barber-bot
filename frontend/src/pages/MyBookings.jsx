@@ -119,6 +119,7 @@ export default function MyBookings() {
                     </div>
                     <p className="muted mt-1" style={{ fontSize: "var(--fs-sm)" }}>
                       {b.service_name || "Xizmat"} · {fmtTime(b.start_at)}
+                      {b.is_overdue && <span style={{ color: "var(--danger)" }}> · ⏰ vaqti o'tdi</span>}
                     </p>
                     <div className="row between mt-2">
                       <span className="faint" style={{ fontSize: "var(--fs-xs)" }}>

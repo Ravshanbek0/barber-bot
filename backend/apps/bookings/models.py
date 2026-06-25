@@ -69,6 +69,15 @@ class Booking(models.Model):
     def is_walk_in(self):
         return self.client_id is None
 
+    @property
+    def is_overdue(self):
+        """Scheduled time has passed but the visit hasn't started yet — the
+        master neither began nor closed it. Surfaced as a marker, not auto-acted."""
+        return (
+            self.status in (self.Status.PENDING, self.Status.CONFIRMED)
+            and self.start_at < timezone.now()
+        )
+
     def selected_services(self):
         """All services in this visit — the combo set if present, else the
         single ``service`` (for older single-service bookings)."""

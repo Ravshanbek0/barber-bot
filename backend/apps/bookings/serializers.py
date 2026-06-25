@@ -21,6 +21,8 @@ class BookingSerializer(serializers.ModelSerializer):
         queryset=Service.objects.all(), source="services",
     )
     status_label = serializers.CharField(source="get_status_display", read_only=True)
+    # True when the scheduled time has passed but the visit hasn't started.
+    is_overdue = serializers.BooleanField(read_only=True)
     # Whether this booking's client has already reviewed this master — lets the
     # client UI hide the "Baholash" button once a rating has been submitted.
     reviewed = serializers.SerializerMethodField()
@@ -71,6 +73,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "queue_position",
             "status",
             "status_label",
+            "is_overdue",
             "note",
             "price_snapshot",
             "reviewed",

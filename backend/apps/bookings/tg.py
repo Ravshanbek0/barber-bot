@@ -42,11 +42,12 @@ def booking_text(booking, *, header="Bron"):
     """Master-facing booking card text."""
     service = booking.services_label()
     emoji = STATUS_EMOJI.get(booking.status, "•")
+    overdue = "\n⏰ <b>Vaqti o'tdi</b>" if booking.is_overdue else ""
     return (
         f"{emoji} <b>{header}</b>\n"
         f"{booking.client_label()} · {service}\n"
         f"🗓 {when_str(booking)}\n"
-        f"Holat: {booking.get_status_display()}"
+        f"Holat: {booking.get_status_display()}{overdue}"
     )
 
 
