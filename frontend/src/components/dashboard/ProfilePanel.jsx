@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../../api/client";
-import { getPosition, reverseGeocode } from "../../lib/geo";
+import { getPosition, reverseGeocode, openLocationSettings } from "../../lib/geo";
 import ShareCard from "./ShareCard.jsx";
 
 const money = (n) => new Intl.NumberFormat("uz-UZ").format(n);
@@ -13,21 +13,31 @@ export default function ProfilePanel({ profile, onChange }) {
     instagram: profile.instagram || "",
     accepts_walkins: profile.accepts_walkins ?? true,
   });
-  const [service, setService] = useState({ name: "", price: "", duration_min: 30 });
+  const [service, setService] = useState({ name: "", price: "", duration_min: "30" });
   const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
   const [locating, setLocating] = useState(false);
   const [locMsg, setLocMsg] = useState("");
+  const [locDenied, setLocDenied] = useState(false);
   const hasLocation = profile.latitude != null && profile.longitude != null;
+  const canSave = form.display_name.trim().length > 0;
 
   const saveProfile = async () => {
-    setSaving(true);
-    await api.patch(`/masters/${profile.handle}/`, form);
-    setSaving(false);
-    onChange?.();
+    if (!canSave) return;
+    setSaveMsg(""); setSaving(true);
+    try {
+      await api.patch(`/masters/${profile.handle}/`, form);
+      setSaveMsg("✅ Saqlandi");
+      onChange?.();
+    } catch {
+      setSaveMsg("❌ Saqlanmadi. Internetni tekshirib qayta urinib ko'ring.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const detectLocation = async () => {
-    setLocMsg(""); setLocating(true);
+    setLocMsg(""); setLocDenied(false); setLocating(true);
     try {
       const { lat, lng } = await getPosition();
       const city = await reverseGeocode(lat, lng);
@@ -36,8 +46,15 @@ export default function ProfilePanel({ profile, onChange }) {
       });
       setLocMsg(`✅ Aniqlandi: ${city || `${lat.toFixed(4)}, ${lng.toFixed(4)}`}`);
       onChange?.();
-    } catch {
-      setLocMsg("❌ Joylashuvga ruxsat berilmadi.");
+    } catch (e) {
+      if (e?.canOpenSettings || e?.message === "denied" || e?.code === 1) {
+        setLocDenied(!!e?.canOpenSettings);
+        setLocMsg("❌ Joylashuvga ruxsat berilmadi. Ruxsat bering va qayta urinib ko'ring.");
+      } else if (e?.code === 3) {
+        setLocMsg("❌ Vaqt tugadi. Qayta urinib ko'ring.");
+      } else {
+        setLocMsg("❌ Joylashuv aniqlanmadi. Qurilmada GPS yoqilganini tekshiring.");
+      }
     } finally {
       setLocating(false);
     }
@@ -49,7 +66,7 @@ export default function ProfilePanel({ profile, onChange }) {
     // so slot generation never sees a zero-length service.
     const duration_min = Number(service.duration_min) >= 5 ? Number(service.duration_min) : 30;
     await api.post("/services/", { ...service, duration_min, master: profile.id });
-    setService({ name: "", price: "", duration_min: 30 });
+    setService({ name: "", price: "", duration_min: "30" });
     onChange?.();
   };
 
@@ -79,6 +96,11 @@ export default function ProfilePanel({ profile, onChange }) {
             </p>
           )}
           {locMsg && <p className="mt-2" style={{ fontSize: "var(--fs-sm)" }}>{locMsg}</p>}
+          {locDenied && (
+            <button className="btn btn-ghost btn-block btn-sm mt-2" onClick={openLocationSettings}>
+              Telegram sozlamalarida ruxsat berish
+            </button>
+          )}
         </div>
 
         <div className="field"><label>Mo'ljal (qo'lda)</label><input className="input" value={form.address} placeholder="Masalan: Metro yonida, 2-qavat" onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
@@ -87,7 +109,9 @@ export default function ProfilePanel({ profile, onChange }) {
           <input type="checkbox" checked={form.accepts_walkins} onChange={(e) => setForm({ ...form, accepts_walkins: e.target.checked })} />
           Navbatsiz mijozlarni qabul qilaman
         </label>
-        <button className="btn btn-primary btn-block mt-4" disabled={saving} onClick={saveProfile}>{saving ? "Saqlanmoqda…" : "Saqlash"}</button>
+        <button className="btn btn-primary btn-block mt-4" disabled={saving || !canSave} onClick={saveProfile}>{saving ? "Saqlanmoqda…" : "Saqlash"}</button>
+        {!canSave && <p className="faint mt-2" style={{ fontSize: "var(--fs-xs)" }}>Ism majburiy maydon.</p>}
+        {saveMsg && <p className="mt-2" style={{ fontSize: "var(--fs-sm)" }}>{saveMsg}</p>}
       </div>
 
       {/* Services */}
@@ -105,7 +129,7 @@ export default function ProfilePanel({ profile, onChange }) {
           <input className="input" placeholder="Xizmat nomi" value={service.name} onChange={(e) => setService({ ...service, name: e.target.value })} />
           <div className="row gap-2">
             <input className="input grow" type="number" placeholder="Narx (so'm)" value={service.price} onChange={(e) => setService({ ...service, price: e.target.value })} />
-            <input className="input" style={{ width: 120 }} type="number" min="5" step="5" placeholder="Daqiqa" value={service.duration_min} onChange={(e) => setService({ ...service, duration_min: Number(e.target.value) })} />
+            <input className="input" style={{ width: 120 }} type="text" inputMode="numeric" placeholder="Daqiqa" value={service.duration_min} onChange={(e) => setService({ ...service, duration_min: e.target.value.replace(/\D/g, "") })} />
           </div>
           <button className="btn btn-ghost btn-block" onClick={addService}>Xizmat qo'shish</button>
         </div>

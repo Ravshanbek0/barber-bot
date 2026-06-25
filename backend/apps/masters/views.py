@@ -1,5 +1,6 @@
 from math import asin, cos, radians, sin, sqrt
 
+from django.db.models import Q
 from django.utils.text import slugify
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -47,6 +48,24 @@ class MasterViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return MasterListSerializer
         return MasterDetailSerializer
+
+    def get_queryset(self):
+        """Public endpoints show only published masters; an authenticated owner
+        can also reach their own draft (is_active=False) to fill it in / edit it.
+
+        Without this a freshly-created master (always a draft) gets a 404 when
+        saving their profile or location via /masters/<handle>/.
+        """
+        qs = (
+            MasterProfile.objects.select_related("user")
+            .prefetch_related("services", "working_hours", "discounts", "reviews")
+        )
+        if self.action == "list":
+            return qs.filter(is_active=True)
+        user = self.request.user
+        if user.is_authenticated:
+            return qs.filter(Q(is_active=True) | Q(user=user))
+        return qs.filter(is_active=True)
 
     def list(self, request, *args, **kwargs):
         """List masters; when ?lat=&lng= is given, sort by nearest distance."""

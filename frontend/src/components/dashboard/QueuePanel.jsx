@@ -10,7 +10,7 @@ const NEXT = {
 const fmtTime = (s) => new Date(s).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
 const money = (n) => new Intl.NumberFormat("uz-UZ").format(n || 0);
 
-export default function QueuePanel({ handle, services = [], version }) {
+export default function QueuePanel({ handle, services = [], version, published = true }) {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -42,9 +42,15 @@ export default function QueuePanel({ handle, services = [], version }) {
         <div className="card kpi"><div className="kpi-val">{money(earned)}</div><div className="kpi-label">Bugungi kirim (so'm)</div></div>
       </div>
 
-      <button className="btn btn-primary btn-block mt-4" onClick={() => { haptic("light"); setShowAdd(true); }}>
-        ➕ Navbatga qo'shish
-      </button>
+      {published ? (
+        <button className="btn btn-primary btn-block mt-4" onClick={() => { haptic("light"); setShowAdd(true); }}>
+          ➕ Navbatga qo'shish
+        </button>
+      ) : (
+        <p className="muted mt-4" style={{ fontSize: "var(--fs-sm)" }}>
+          Profilingizni e'lon qilgandan so'ng qo'lda navbat qo'shasiz.
+        </p>
+      )}
 
       <div className="card mt-3">
         {queue.length === 0 ? (

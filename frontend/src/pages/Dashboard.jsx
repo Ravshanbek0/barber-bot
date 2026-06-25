@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
 import { useSocket } from "../hooks/useSocket";
@@ -31,9 +31,17 @@ export default function Dashboard() {
   const [queueVersion, setQueueVersion] = useState(0);
   const [publishMsg, setPublishMsg] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const firstLoad = useRef(true);
 
   const loadProfile = () =>
-    api.get("/masters/me/").then(({ data }) => setProfile(data)).catch(() => setProfile(false));
+    api.get("/masters/me/").then(({ data }) => {
+      setProfile(data);
+      // Fresh masters land on a draft — open the Profil tab so they fill it in.
+      if (firstLoad.current) {
+        firstLoad.current = false;
+        if (!data.is_active) setTab("profile");
+      }
+    }).catch(() => setProfile(false));
 
   useEffect(() => { loadProfile(); }, []);
 
@@ -111,7 +119,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-4">
-        {tab === "queue" && <QueuePanel handle={profile.handle} services={profile.services} version={queueVersion} />}
+        {tab === "queue" && <QueuePanel handle={profile.handle} services={profile.services} version={queueVersion} published={profile.is_active} />}
         {tab === "hours" && <HoursPanel profile={profile} onChange={loadProfile} />}
         {tab === "discounts" && <DiscountPanel profile={profile} onChange={loadProfile} />}
         {tab === "profile" && <ProfilePanel profile={profile} onChange={loadProfile} />}
