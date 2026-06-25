@@ -48,6 +48,10 @@ class Booking(models.Model):
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     reminder_sent = models.BooleanField(default=False)
+    # Telegram message id of the master's booking card (the notification with
+    # the action buttons). Stored so a status change made elsewhere (e.g. the
+    # dashboard) can edit that same message and keep its buttons in sync.
+    master_message_id = models.BigIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

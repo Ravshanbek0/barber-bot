@@ -117,6 +117,12 @@ class MasterViewSet(viewsets.ModelViewSet):
         user = request.user
         existing = MasterProfile.objects.filter(user=user).first()
         if existing:
+            # Re-entering after leaving master mode: the profile was kept, just
+            # flip the role flags back on.
+            if not user.is_master:
+                user.is_master = True
+                user.role = user.Role.MASTER
+                user.save(update_fields=["is_master", "role"])
             return Response(MasterDetailSerializer(existing).data)
 
         display_name = user.display_name
@@ -134,6 +140,21 @@ class MasterViewSet(viewsets.ModelViewSet):
         user.role = user.Role.MASTER
         user.save(update_fields=["is_master", "role"])
         return Response(MasterDetailSerializer(profile).data, status=201)
+
+    @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def leave(self, request):
+        """Switch back to a regular client view (exit master mode).
+
+        Keeps the master profile and all its data but unpublishes it and clears
+        the role flags, so the user can browse/book as a client. Becoming a
+        master again later restores the same profile.
+        """
+        user = request.user
+        MasterProfile.objects.filter(user=user, is_active=True).update(is_active=False)
+        user.is_master = False
+        user.role = user.Role.CLIENT
+        user.save(update_fields=["is_master", "role"])
+        return Response({"detail": "Mijoz ko'rinishiga qaytdingiz", "is_master": False})
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
     def publish(self, request):

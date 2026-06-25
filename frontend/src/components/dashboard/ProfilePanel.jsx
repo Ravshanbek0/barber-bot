@@ -38,23 +38,36 @@ export default function ProfilePanel({ profile, onChange }) {
 
   const detectLocation = async () => {
     setLocMsg(""); setLocDenied(false); setLocating(true);
+
+    // Step 1: get coordinates from the device. Errors here are geolocation/
+    // permission problems — keep them separate from server errors below so we
+    // don't blame "permission denied" when the real issue is saving.
+    let coords;
     try {
-      const { lat, lng } = await getPosition();
-      const city = await reverseGeocode(lat, lng);
-      await api.patch(`/masters/${profile.handle}/`, {
-        latitude: lat, longitude: lng, city,
-      });
-      setLocMsg(`✅ Aniqlandi: ${city || `${lat.toFixed(4)}, ${lng.toFixed(4)}`}`);
-      onChange?.();
+      coords = await getPosition();
     } catch (e) {
       if (e?.canOpenSettings || e?.message === "denied" || e?.code === 1) {
         setLocDenied(!!e?.canOpenSettings);
         setLocMsg("❌ Joylashuvga ruxsat berilmadi. Ruxsat bering va qayta urinib ko'ring.");
-      } else if (e?.code === 3) {
-        setLocMsg("❌ Vaqt tugadi. Qayta urinib ko'ring.");
+      } else if (e?.code === 3 || e?.message === "timeout") {
+        setLocMsg("❌ Joylashuv aniqlanmadi (vaqt tugadi). Qayta urinib ko'ring.");
       } else {
         setLocMsg("❌ Joylashuv aniqlanmadi. Qurilmada GPS yoqilganini tekshiring.");
       }
+      setLocating(false);
+      return;
+    }
+
+    // Step 2: persist the coordinates. City lookup is best-effort (never blocks).
+    try {
+      const city = await reverseGeocode(coords.lat, coords.lng);
+      await api.patch(`/masters/${profile.handle}/`, {
+        latitude: coords.lat, longitude: coords.lng, city,
+      });
+      setLocMsg(`✅ Aniqlandi: ${city || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`}`);
+      onChange?.();
+    } catch {
+      setLocMsg("❌ Joylashuv aniqlandi, lekin serverga saqlanmadi. Server javob bermayapti — keyinroq urinib ko'ring.");
     } finally {
       setLocating(false);
     }

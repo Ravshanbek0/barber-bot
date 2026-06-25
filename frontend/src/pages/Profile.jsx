@@ -9,6 +9,7 @@ export default function Profile() {
   const { user, logout, patchUser } = useAuth();
   const navigate = useNavigate();
   const [becoming, setBecoming] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [needVerify, setNeedVerify] = useState(false);
   const initial = (user?.display_name || "U")[0]?.toUpperCase();
   const photo = user?.photo_url;
@@ -28,6 +29,17 @@ export default function Profile() {
     if (user?.is_master) return navigate("/dashboard");
     if (!user?.is_registered) return setNeedVerify(true); // verify phone first
     doBecome();
+  };
+
+  const leaveMaster = async () => {
+    setLeaving(true);
+    try {
+      await api.post("/masters/leave/");
+      patchUser({ is_master: false, role: "client" });
+      navigate("/");
+    } finally {
+      setLeaving(false);
+    }
   };
 
   return (
@@ -55,6 +67,11 @@ export default function Profile() {
         <button className="btn btn-ghost btn-block" onClick={() => navigate("/bookings")}>
           Bronlarim
         </button>
+        {user?.is_master && (
+          <button className="btn btn-ghost btn-block" disabled={leaving} onClick={leaveMaster}>
+            {leaving ? "Chiqilmoqda…" : "Usta rejimidan chiqish"}
+          </button>
+        )}
       </div>
 
       {!isTelegram() && (

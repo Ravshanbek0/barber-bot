@@ -5,7 +5,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from apps.accounts.telegram_bot import send_message
+from apps.accounts.telegram_bot import edit_message_text, send_message
 
 from .models import Booking
 from .serializers import BookingSerializer
@@ -76,11 +76,16 @@ def _dispatch_notifications(booking_pk, created):
         # Master gets the booking with inline action buttons (Tasdiqlash / Bekor).
         # Skipped for walk-ins: the master added it themselves and there is no
         # client account to notify.
-        send_message(
+        msg_id = send_message(
             master_tg,
             booking_text(instance, header="Yangi bron"),
             reply_markup=master_keyboard(instance),
         )
+        # Remember the card so a later status change (from the app or the bot)
+        # can edit it and keep its buttons in sync. update() avoids re-firing
+        # this signal.
+        if msg_id:
+            Booking.objects.filter(pk=instance.pk).update(master_message_id=msg_id)
         send_message(
             client_tg,
             f"🕐 <b>So'rovingiz yuborildi</b>\n{instance.master.display_name} · {service}\n"
@@ -98,4 +103,14 @@ def _dispatch_notifications(booking_pk, created):
                 client_tg,
                 f"{msg}\n{instance.master.display_name} · {service}\n🗓 {when}",
                 reply_markup=markup,
+            )
+        # Keep the master's original booking card in sync — its buttons should
+        # reflect the new status (and disappear on terminal states). Works even
+        # when the change came from the dashboard, since this runs server-side.
+        if master_tg and instance.master_message_id:
+            edit_message_text(
+                master_tg,
+                instance.master_message_id,
+                booking_text(instance),
+                reply_markup=master_keyboard(instance),
             )
