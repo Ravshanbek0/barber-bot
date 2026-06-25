@@ -102,7 +102,8 @@ class Command(BaseCommand):
         # Phone shared via the Mini App's requestContact / a request_contact button.
         contact = message.get("contact")
         if contact and contact.get("phone_number"):
-            self._save_contact(contact)
+            sender_id = (message.get("from") or {}).get("id")
+            self._save_contact(contact, sender_id)
             self._call(token, "sendMessage", {
                 "chat_id": chat_id,
                 "text": "✅ Raqamingiz saqlandi. Ilovaga qaytishingiz mumkin.",
@@ -155,11 +156,16 @@ class Command(BaseCommand):
                 "reply_markup": {"inline_keyboard": rows},
             })
 
-    def _save_contact(self, contact):
-        """Attach a shared phone number to the matching Telegram user."""
+    def _save_contact(self, contact, sender_id=None):
+        """Attach a shared phone number to the matching Telegram user.
+
+        Some clients omit ``contact.user_id`` when a user shares their own
+        number; in a private chat the message sender is that same user, so fall
+        back to ``sender_id``.
+        """
         from apps.accounts.models import User
 
-        tg_id = contact.get("user_id")
+        tg_id = contact.get("user_id") or sender_id
         phone = contact.get("phone_number")
         if not tg_id:
             return

@@ -6,7 +6,9 @@ import { tg } from "../lib/telegram";
 /**
  * Phone verification sheet with two methods:
  *  - OTP SMS (demo: the code is shown in-app)
- *  - Telegram contact share (requestContact -> bot saves phone -> we poll /me)
+ *  - Telegram contact share: modern clients hand the number straight back to the
+ *    Mini App (we save it directly); older ones only deliver it to the bot, so we
+ *    fall back to polling /me until the bot has stored it.
  *
  * Calls onVerified(user) once the account becomes registered.
  */
@@ -55,13 +57,31 @@ export default function PhoneVerify({ title = "Raqamingizni tasdiqlang", onVerif
   const shareViaTelegram = () => {
     setError("");
     try {
-      tg.requestContact((ok) => {
+      tg.requestContact((ok, ev) => {
         if (!ok) { setError("Bekor qilindi."); return; }
-        pollMe();
+        // Modern clients return the shared contact straight to the Mini App, so
+        // we can save it without the bot. Older clients omit it -> poll /me while
+        // the bot stores the contact it received as a message.
+        const phone = ev?.responseUnsafe?.contact?.phone_number;
+        if (phone) savePhone(phone);
+        else pollMe();
       });
     } catch {
       setError("Telegram orqali ulashish bu qurilmada ishlamadi. SMS kodni tanlang.");
       setMethod("otp");
+    }
+  };
+
+  const savePhone = async (raw) => {
+    setError(""); setLoading(true);
+    const phone = raw.startsWith("+") ? raw : `+${raw}`;
+    try {
+      const { data } = await api.post("/auth/phone/", { phone });
+      finish(data.user);
+      setLoading(false);
+    } catch {
+      // Direct save failed — fall back to the bot + poll path.
+      await pollMe();
     }
   };
 
