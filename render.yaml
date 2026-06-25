@@ -42,5 +42,7 @@ services:
         value: "https://barber-bot-tau.vercel.app"
       - key: TELEGRAM_BOT_TOKEN
         sync: false                # set this secret in the Render dashboard
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false                # random string; must match `set_webhook`
       - key: OTP_DEV_PRINT
         value: "True"

@@ -192,3 +192,10 @@ SMS_SENDER = os.getenv("SMS_SENDER", "")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 # Public HTTPS URL of the Mini App (frontend). Required for the bot's web_app button.
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://example.com")
+# The bot can run via webhook (production) instead of long polling. Set a random
+# secret and register it with `python manage.py set_webhook`; the webhook view
+# rejects requests whose secret-token header doesn't match.
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+# Public HTTPS URL of THIS backend (used to build the webhook URL). Render
+# injects RENDER_EXTERNAL_URL automatically.
+BACKEND_URL = os.getenv("BACKEND_URL") or os.getenv("RENDER_EXTERNAL_URL", "")

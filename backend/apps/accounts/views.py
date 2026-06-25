@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 
 from django.conf import settings
 from rest_framework import status
@@ -17,6 +18,9 @@ from .serializers import (
     UserSerializer,
 )
 from .services import create_and_send_otp, parse_telegram_init_data, verify_otp
+from .telegram_dispatch import TelegramBot
+
+log = logging.getLogger(__name__)
 
 
 def tokens_for(user):
@@ -242,3 +246,22 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def telegram_webhook(request):
+    """Telegram pushes bot updates here (production runs the bot via webhook).
+
+    Verifies the secret-token header, then hands the update to the shared
+    dispatcher. Always returns 200 so a handler error doesn't make Telegram
+    retry the same update indefinitely.
+    """
+    secret = settings.TELEGRAM_WEBHOOK_SECRET
+    if secret and request.headers.get("X-Telegram-Bot-Api-Secret-Token") != secret:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    try:
+        TelegramBot().handle_update(request.data or {})
+    except Exception:
+        log.exception("Telegram webhook handler failed")
+    return Response({"ok": True})
