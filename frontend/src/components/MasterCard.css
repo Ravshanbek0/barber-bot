@@ -8,11 +8,11 @@
 .mcard:active { transform: scale(0.99); }
 .mcard:hover { border-color: var(--border); background: var(--surface-2); }
 
+.mcard-avatar-wrap { position: relative; flex: 0 0 auto; }
 .mcard-avatar {
   width: 66px;
   height: 66px;
   border-radius: 16px;
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,6 +23,24 @@
   overflow: hidden;
 }
 .mcard-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Sale flag — sits on the avatar corner so a discount is the first thing seen. */
+.mcard-ribbon {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-sm);
+  line-height: 1.25;
+  z-index: 1;
+}
 
 .mcard-body { flex: 1; min-width: 0; }
 .mcard-name {
@@ -47,11 +65,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.mcard-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.mcard-pricing {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+.mcard-old {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}
 .mcard-price {
   font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
 }
+.mcard-price.is-sale { color: var(--brass); font-size: var(--fs-base); }
 .mcard-price small { color: var(--text-faint); font-weight: 500; }
 .mcard-dist { color: var(--brass); font-weight: 700; margin-right: 6px; }

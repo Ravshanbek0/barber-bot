@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import "./MasterCard.css";
 
 const fmt = (n) =>
-  n == null ? "—" : new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
+  n == null ? "—" : new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " so'm";
 
 export default function MasterCard({ master }) {
   const initials = (master.display_name || "?")
@@ -11,10 +11,19 @@ export default function MasterCard({ master }) {
     .slice(0, 2)
     .join("");
 
+  const pct = master.discount_percent || 0;
+  const hasDiscount = pct > 0 && master.min_price != null;
+  // Discounted "from" price — the −% badge and this price are computed by the
+  // backend off the same (cheapest) service, so they never disagree.
+  const newPrice = hasDiscount ? master.min_price * (1 - pct / 100) : master.min_price;
+
   return (
     <Link to={`/m/${master.handle}`} className="mcard card">
-      <div className="mcard-avatar">
-        <span>{initials}</span>
+      <div className="mcard-avatar-wrap">
+        <div className="mcard-avatar">
+          <span>{initials}</span>
+        </div>
+        {hasDiscount && <span className="mcard-ribbon">−{pct}%</span>}
       </div>
 
       <div className="mcard-body">
@@ -31,14 +40,19 @@ export default function MasterCard({ master }) {
           {master.city || master.address || "Manzil ko'rsatilmagan"}
           {master.address && master.city ? ` · ${master.address}` : ""}
         </p>
-        <div className="row between mt-2 gap-2">
-          <div className="row gap-2">
+        <div className="mcard-foot mt-2">
+          <div className="row gap-2 wrap">
             <span className="badge">{master.services_count} xizmat</span>
             {master.accepts_walkins && (
               <span className="badge badge-success">Navbatsiz</span>
             )}
           </div>
-          <span className="mcard-price">{fmt(master.min_price)}<small> dan</small></span>
+          <div className="mcard-pricing">
+            {hasDiscount && <span className="mcard-old">{fmt(master.min_price)}</span>}
+            <span className={`mcard-price ${hasDiscount ? "is-sale" : ""}`}>
+              {fmt(newPrice)}<small> dan</small>
+            </span>
+          </div>
         </div>
       </div>
     </Link>

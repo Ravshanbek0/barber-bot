@@ -62,6 +62,7 @@ class MasterListSerializer(serializers.ModelSerializer):
     """Compact payload for search results / cards."""
 
     min_price = serializers.SerializerMethodField()
+    discount_percent = serializers.SerializerMethodField()
     services_count = serializers.IntegerField(source="services.count", read_only=True)
     distance_km = serializers.SerializerMethodField()
 
@@ -79,13 +80,31 @@ class MasterListSerializer(serializers.ModelSerializer):
             "reviews_count",
             "accepts_walkins",
             "min_price",
+            "discount_percent",
             "services_count",
             "distance_km",
         ]
 
+    def _cheapest_service(self, obj):
+        active = [s for s in obj.services.all() if s.is_active]
+        return min(active, key=lambda s: s.price) if active else None
+
     def get_min_price(self, obj):
-        prices = [s.price for s in obj.services.all() if s.is_active]
-        return min(prices) if prices else None
+        s = self._cheapest_service(obj)
+        return s.price if s else None
+
+    def get_discount_percent(self, obj):
+        """Best live discount that applies to the cheapest service, so the card's
+        "dan" price and the −% badge always refer to the same service. Discounts
+        with no `service` are shop-wide and apply to every service."""
+        s = self._cheapest_service(obj)
+        if not s:
+            return 0
+        pct = 0
+        for d in obj.discounts.all():
+            if d.is_live and d.percent and (d.service_id is None or d.service_id == s.id):
+                pct = max(pct, d.percent)
+        return min(pct, 90)
 
     def get_distance_km(self, obj):
         d = getattr(obj, "distance_km", None)
