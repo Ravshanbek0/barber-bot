@@ -3,6 +3,7 @@ import { useAuth } from "./store/auth";
 import AuthBootstrap from "./components/AuthBootstrap.jsx";
 import TopBar from "./components/TopBar.jsx";
 import BottomNav from "./components/BottomNav.jsx";
+import ShareFab from "./components/ShareFab.jsx";
 import RealtimeListener from "./components/RealtimeListener.jsx";
 import Search from "./pages/Search.jsx";
 import MasterDetail from "./pages/MasterDetail.jsx";
@@ -43,6 +44,7 @@ function Shell() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+        <ShareFab />
         <BottomNav />
       </div>
   );

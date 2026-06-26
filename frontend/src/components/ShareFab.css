@@ -1,0 +1,24 @@
+.share-fab {
+  position: fixed;
+  right: max(16px, calc(50% - var(--app-width) / 2 + 16px));
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 18px);
+  z-index: 150;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--gradient-brass);
+  color: var(--on-brass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--glow-brass), var(--shadow);
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+  animation: fabIn .26s cubic-bezier(.2, .8, .2, 1);
+}
+.share-fab:hover { filter: brightness(1.05); }
+.share-fab:active { transform: scale(0.92); }
+
+@keyframes fabIn {
+  from { transform: scale(0.6); opacity: 0; }
+}
