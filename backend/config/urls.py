@@ -5,6 +5,7 @@ from django.urls import include, path
 
 api_v1 = [
     path("auth/", include("apps.accounts.urls")),
+    path("admin/", include("apps.adminpanel.urls")),
     path("", include("apps.masters.urls")),
     path("", include("apps.bookings.urls")),
     path("", include("apps.chat.urls")),

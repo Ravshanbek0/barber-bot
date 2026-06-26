@@ -22,6 +22,7 @@ from .models import (
     WorkingHours,
 )
 from .permissions import IsOwnerMasterOrReadOnly
+from apps.adminpanel.events import record
 from .serializers import (
     DiscountSerializer,
     MasterDetailSerializer,
@@ -123,6 +124,7 @@ class MasterViewSet(viewsets.ModelViewSet):
                 user.is_master = True
                 user.role = user.Role.MASTER
                 user.save(update_fields=["is_master", "role"])
+                record(user, kind="became_master", description="Usta rejimiga qaytdi")
             return Response(MasterDetailSerializer(existing).data)
 
         display_name = user.display_name
@@ -139,6 +141,7 @@ class MasterViewSet(viewsets.ModelViewSet):
         user.is_master = True
         user.role = user.Role.MASTER
         user.save(update_fields=["is_master", "role"])
+        record(user, kind="became_master", description="Yangi usta profili yaratdi")
         return Response(MasterDetailSerializer(profile).data, status=201)
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
@@ -154,6 +157,7 @@ class MasterViewSet(viewsets.ModelViewSet):
         user.is_master = False
         user.role = user.Role.CLIENT
         user.save(update_fields=["is_master", "role"])
+        record(user, kind="left_master", description="Mijoz ko'rinishiga qaytdi")
         return Response({"detail": "Mijoz ko'rinishiga qaytdingiz", "is_master": False})
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
@@ -186,6 +190,8 @@ class MasterViewSet(viewsets.ModelViewSet):
 
         profile.is_active = True
         profile.save(update_fields=["is_active"])
+        record(request.user, kind="published",
+               description=f"@{profile.handle} profilini e'lon qildi")
         return Response(MasterDetailSerializer(profile).data)
 
     @staticmethod
@@ -213,6 +219,8 @@ class MasterViewSet(viewsets.ModelViewSet):
         )
         master.recompute_rating()
         master.refresh_from_db()
+        record(request.user, kind="review_created",
+               description=f"{master.display_name} — {serializer.validated_data['rating']}⭐")
         return Response(MasterDetailSerializer(master, context={"request": request}).data)
 
 
@@ -274,5 +282,10 @@ class DiscountViewSet(_OwnedBase):
 
     def get_queryset(self):
         return Discount.objects.select_related("master").all()
+
+    def perform_create(self, serializer):
+        discount = serializer.save(master=self._master())
+        record(self.request.user, kind="discount_created",
+               description=f"−{discount.percent}% — {discount.title}")
 
 

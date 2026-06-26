@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.masters",
     "apps.bookings",
     "apps.chat",
+    "apps.adminpanel",
 ]
 
 MIDDLEWARE = [

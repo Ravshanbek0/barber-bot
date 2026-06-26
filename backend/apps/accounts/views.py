@@ -19,6 +19,7 @@ from .serializers import (
 )
 from .services import create_and_send_otp, parse_telegram_init_data, verify_otp
 from .telegram_dispatch import TelegramBot
+from apps.adminpanel.events import record
 
 log = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ def telegram_webapp(request):
 
     # New Telegram users start as guests (is_registered=False): they can browse,
     # but must add a phone to book. The Telegram identity is trusted for login.
-    user, _ = User.objects.get_or_create(
+    user, created = User.objects.get_or_create(
         telegram_id=tg_id,
         defaults={"phone": f"tg{tg_id}"},
     )
@@ -129,6 +130,8 @@ def telegram_webapp(request):
     if fields:
         user.save(update_fields=fields)
 
+    record(user, kind="joined" if created else "login",
+           description="Telegram orqali ilovaga kirdi")
     return auth_response(user)
 
 
@@ -147,6 +150,7 @@ def dev_login(request):
         phone="+998900000002",
         defaults={"first_name": "Mehmon"},
     )
+    record(user, kind="login", description="Brauzer (dev) orqali kirdi")
     return auth_response(user)
 
 
@@ -157,6 +161,7 @@ def _attach_phone(user, phone):
     user.is_phone_verified = True
     user.is_registered = True
     user.save(update_fields=["phone", "is_phone_verified", "is_registered"])
+    record(user, kind="registered", description="Telefon raqamini tasdiqladi")
 
 
 @api_view(["POST"])

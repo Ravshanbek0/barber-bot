@@ -94,6 +94,7 @@ class TelegramBot:
             # client lands straight on their booking page.
             parts = text.split(maxsplit=1)
             param = parts[1].strip() if len(parts) > 1 else ""
+            self._record_start(message, chat_id, param)
             if param:
                 master = self._master_by_handle(param)
                 if master:
@@ -129,6 +130,29 @@ class TelegramBot:
                 "reply_markup": {"inline_keyboard": rows},
             })
 
+    def _record_start(self, message, chat_id, param):
+        """Log a /start press for the admin activity feed.
+
+        The user may have no account yet (first contact), so fall back to the
+        Telegram name from the message and keep the raw tg id either way.
+        """
+        from apps.accounts.models import User
+        from apps.adminpanel.events import record
+
+        frm = message.get("from") or {}
+        name = " ".join(p for p in (frm.get("first_name"), frm.get("last_name")) if p)
+        if not name:
+            name = frm.get("username") or f"tg{chat_id}"
+        user = User.objects.filter(telegram_id=chat_id).first()
+        record(
+            user,
+            kind="bot_start",
+            label=name,
+            tg_id=chat_id,
+            description=(f"Havola: {param}" if param else "Botda /start bosdi"),
+            deep_link=param or None,
+        )
+
     def _save_contact(self, contact, sender_id=None):
         """Attach a shared phone number to the matching Telegram user.
 
@@ -152,6 +176,9 @@ class TelegramBot:
         user.is_phone_verified = True
         user.is_registered = True
         user.save(update_fields=["phone", "is_phone_verified", "is_registered"])
+
+        from apps.adminpanel.events import record
+        record(user, kind="registered", description="Telegram orqali raqam ulashdi")
 
     # ------------------------------------------------------------------ #
     #  Inline buttons: master confirms a booking, client rates a visit.    #
