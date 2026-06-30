@@ -84,12 +84,15 @@ TEMPLATES = [
 # present; otherwise fall back to SQLite (local) or discrete DB_* vars.
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
+# Render's managed Postgres needs SSL; Railway's internal Postgres
+# (postgres.railway.internal) does NOT — set DB_SSL_REQUIRE=False there.
+DB_SSL_REQUIRE = env_bool("DB_SSL_REQUIRE", True)
 if DATABASE_URL:
     import dj_database_url
 
     DATABASES = {
         "default": dj_database_url.parse(
-            DATABASE_URL, conn_max_age=600, ssl_require=True
+            DATABASE_URL, conn_max_age=600, ssl_require=DB_SSL_REQUIRE
         )
     }
 elif "sqlite" in DB_ENGINE:
