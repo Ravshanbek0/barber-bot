@@ -24,6 +24,14 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-secret-key")
 DEBUG = env_bool("DEBUG", True)
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# Railway sends its healthcheck request with Host: healthcheck.railway.app and
+# serves the app on RAILWAY_PUBLIC_DOMAIN — add both so Django doesn't reject
+# them with 400 (which would make the deploy healthcheck fail).
+ALLOWED_HOSTS.append("healthcheck.railway.app")
+_railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_domain)
+
 INSTALLED_APPS = [
     "daphne",  # must be first so ASGI server runs
     "django.contrib.admin",

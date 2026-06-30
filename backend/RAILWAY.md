@@ -47,6 +47,13 @@ bir martalik sozlash. Tartibni buzmang.
 4. Servisni qayta deploy qiling (**Deploy**). Boot paytida `migrate`,
    `collectstatic` va `set_webhook` avtomatik ishlaydi — bot ulanadi.
 
+> **Healthcheck:** `railway.json` da `healthcheckPath: /healthz` belgilangan.
+> Bu yengil endpoint DBga tegmaydi va `healthcheck.railway.app` host bilan ham
+> `200 ok` qaytaradi (`ALLOWED_HOSTS` ga avtomatik qo'shiladi). Agar baribir
+> "Healthcheck failure" chiqsa — bu deyarli har doim boot crash'i: **Deploy
+> Logs** ni oching va `migrate`/DB ulanish xatosini qidiring (ko'pincha
+> `DB_SSL_REQUIRE=False` qo'yilmagani yoki `DATABASE_URL` ulanmagani).
+
 ## 5. Admin akkaunt yaratish
 Backend servisi → **⋮ → Shell** (yoki lokalda `railway run`):
 ```bash

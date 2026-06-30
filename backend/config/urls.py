@@ -1,7 +1,14 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import include, path
+
+
+def healthz(_request):
+    """Lightweight liveness probe for Railway/Render — no DB, always 200."""
+    return HttpResponse("ok", content_type="text/plain")
+
 
 api_v1 = [
     path("auth/", include("apps.accounts.urls")),
@@ -12,6 +19,7 @@ api_v1 = [
 ]
 
 urlpatterns = [
+    path("healthz", healthz),
     path("admin/", admin.site.urls),
     path("api/v1/", include(api_v1)),
 ]
