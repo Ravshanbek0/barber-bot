@@ -3,86 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
 import { haptic } from "../lib/telegram";
+import { buildSlots } from "../lib/slots";
 import PhoneVerify from "../components/PhoneVerify.jsx";
 import "./MasterDetail.css";
 
 const fmt = (n) => new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
 const DAYS = ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"];
 const DAYS_FULL = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
-
-// JS getDay(): 0=Sun..6=Sat. Backend weekday: 0=Mon..6=Sun.
-const jsToBackendWeekday = (d) => (d + 6) % 7;
-
-const labelOf = (t) => {
-  const m = ((t % (24 * 60)) + 24 * 60) % (24 * 60);
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-};
-
-// Granularity of the round-time grid (minutes). Slots land on :00 / :30 so the
-// offered times stay stable and predictable no matter how long the visit is.
-const SLOT_STEP = 30;
-
-// Returns bookable start times as [{ t: minutes-of-day, label: "HH:MM" }].
-//
-// Candidate start times come from two sources:
-//  1. A FIXED round-time grid anchored at the opening hour (09:00, 09:30, …).
-//     This keeps the visible times stable regardless of the chosen service
-//     length — selecting a longer service never shifts 17:00 off the grid; it
-//     only hides slots that no longer fit.
-//  2. Smart anchors around each existing booking — the moment a booking ends
-//     (start again right after it) and `booking.start − duration` (finish
-//     exactly when the next booking begins). So a 20-min visit before a 17:00
-//     booking is offered at 16:40, and time after a long 17:00–18:20 booking
-//     resumes at 18:20.
-//
-// A candidate is kept only if it sits inside working hours, isn't in the past,
-// and the whole visit fits without overlapping any booking.
-function buildSlots(hours, date, durationMin, busy = []) {
-  if (!hours) return [];
-  const wd = jsToBackendWeekday(date.getDay());
-  const h = hours.find((x) => x.weekday === wd);
-  if (!h || h.is_day_off) return [];
-  const dur = durationMin || 30;
-  const [sh, sm] = h.start_time.split(":").map(Number);
-  const [eh, em] = h.end_time.split(":").map(Number);
-  const open = sh * 60 + sm;
-  let close = eh * 60 + em;
-  // A close time of 00:00 (or any value <= open) means midnight / past
-  // midnight — treat it as the end of the day so slots are generated.
-  if (close <= open) close += 24 * 60;
-
-  // Existing bookings as minute-of-day intervals on this date.
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  const intervals = busy
-    .map((b) => ({
-      s: Math.round((b.start - dayStart) / 60000),
-      e: Math.round((b.end - dayStart) / 60000),
-    }))
-    .filter((b) => b.e > open && b.s < close);
-
-  const candidates = new Set();
-  for (let t = open; t + dur <= close; t += SLOT_STEP) candidates.add(t);
-  for (const b of intervals) {
-    candidates.add(b.e); // start as soon as the previous visit ends
-    candidates.add(b.s - dur); // finish exactly when the next visit starts
-  }
-
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-
-  const fits = (t) =>
-    t >= open &&
-    t + dur <= close && // visit ends within working hours
-    !(isToday && t <= nowMin + 10) && // not in the past (10-min lead time)
-    !intervals.some((b) => t < b.e && b.s < t + dur); // no overlap with a booking
-
-  return [...candidates]
-    .filter(fits)
-    .sort((a, b) => a - b)
-    .map((t) => ({ t, label: labelOf(t) }));
-}
 
 export default function MasterDetail() {
   const { handle } = useParams();
@@ -97,6 +24,7 @@ export default function MasterDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState("");
   const [needPhone, setNeedPhone] = useState(false);
+  const [agreed, setAgreed] = useState(false); // pre-visit confirmation consent
   const isRegistered = useAuth((s) => !!s.user?.is_registered);
 
   useEffect(() => {
@@ -156,6 +84,7 @@ export default function MasterDetail() {
     setTime("");
     setBookError("");
     setNeedPhone(false);
+    setAgreed(false);
     setSheet(true);
     haptic("light");
   };
@@ -313,6 +242,7 @@ export default function MasterDetail() {
       {sheet && !needPhone && (
         <div className="sheet-overlay" onClick={() => setSheet(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <button className="sheet-x" onClick={() => setSheet(false)} aria-label="Yopish">✕</button>
             <div className="sheet-grab" />
             <h3>Bron qilish</h3>
 
@@ -370,12 +300,27 @@ export default function MasterDetail() {
                   <p className="mt-2" style={{ color: "var(--danger)", fontSize: "var(--fs-sm)" }}>{bookError}</p>
                 )}
 
+                {/* Important pre-booking warning + consent (#6). The booking is
+                    only created once the client agrees to the confirmation flow. */}
+                <div className="consent-box mt-3">
+                  <p className="consent-title">⚠️ Muhim eslatma</p>
+                  <p className="consent-text">
+                    Navbatingizga <b>15</b> va <b>5</b> daqiqa qolganda botdan
+                    tasdiqlash so'raladi. Kelishingizni tasdiqlang — aks holda
+                    bron bekor qilinishi mumkin.
+                  </p>
+                  <label className="consent-check">
+                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                    <span>Roziman, tasdiqlash so'rovlariga javob beraman</span>
+                  </label>
+                </div>
+
                 <button
-                  className="btn btn-primary btn-block btn-lg mt-2"
-                  disabled={!selected.length || !time || submitting}
+                  className="btn btn-primary btn-block btn-lg mt-3"
+                  disabled={!selected.length || !time || !agreed || submitting}
                   onClick={submit}
                 >
-                  {submitting ? "Yuborilmoqda…" : time ? `${time} ga bron qilish` : "Vaqtni tanlang"}
+                  {submitting ? "Yuborilmoqda…" : !agreed ? "Roziligingizni belgilang" : time ? `${time} ga bron qilish` : "Vaqtni tanlang"}
                 </button>
           </div>
         </div>
@@ -393,6 +338,7 @@ export default function MasterDetail() {
       {done && (
         <div className="sheet-overlay" onClick={() => navigate("/bookings")}>
           <div className="sheet center" onClick={(e) => e.stopPropagation()}>
+            <button className="sheet-x" onClick={() => navigate("/bookings")} aria-label="Yopish">✕</button>
             <div className="sheet-grab" />
             <div className="book-check">✓</div>
             <h3 className="mt-3">So'rovingiz yuborildi!</h3>

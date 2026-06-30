@@ -15,6 +15,11 @@ export default function Search() {
   const fetchMasters = async (opts = {}) => {
     setLoading(true);
     try {
+      if (sort === "saved") {
+        const { data } = await api.get("/masters/saved/");
+        setMasters(data.results || data);
+        return;
+      }
       const params = {};
       if (query) params.search = query;
       if (opts.near && opts.coords) {
@@ -31,6 +36,10 @@ export default function Search() {
       setLoading(false);
     }
   };
+
+  // Drop a card from the current list the instant it's un-saved in the
+  // "Saqlangan" view, so the list reflects the action without a refetch.
+  const removeFromList = (id) => setMasters((prev) => prev.filter((m) => m.id !== id));
 
   useEffect(() => {
     if (sort === "near") {
@@ -111,6 +120,9 @@ export default function Search() {
             <button className={`chip ${sort === "created_at" ? "active" : ""}`} onClick={() => setSort("created_at")}>
               Yangi
             </button>
+            <button className={`chip ${sort === "saved" ? "active" : ""}`} onClick={() => setSort("saved")}>
+              ❤ Saqlangan
+            </button>
           </div>
         </div>
 
@@ -127,14 +139,24 @@ export default function Search() {
                   </div>
                 </div>
               ))
-            : masters.map((m) => <MasterCard key={m.id} master={m} />)}
+            : masters.map((m) => (
+                <MasterCard
+                  key={m.id}
+                  master={m}
+                  onUnsave={sort === "saved" ? removeFromList : undefined}
+                />
+              ))}
         </div>
 
         {!loading && masters.length === 0 && (
           <div className="empty">
-            <div className="empty-emoji">💈</div>
-            <p>Hech narsa topilmadi.</p>
-            <p className="faint">Boshqa so'rovni sinab ko'ring.</p>
+            <div className="empty-emoji">{sort === "saved" ? "❤" : "💈"}</div>
+            <p>{sort === "saved" ? "Saqlangan ustalar yo'q." : "Hech narsa topilmadi."}</p>
+            <p className="faint">
+              {sort === "saved"
+                ? "Yoqgan ustani kartadagi yurakcha bilan saqlang."
+                : "Boshqa so'rovni sinab ko'ring."}
+            </p>
           </div>
         )}
       </div>

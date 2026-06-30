@@ -4,9 +4,25 @@ from .models import (
     Discount,
     MasterProfile,
     Review,
+    SavedMaster,
     Service,
     WorkingHours,
 )
+
+
+class SavedStateMixin:
+    """Adds an `is_saved` flag — whether the requesting user bookmarked this
+    master. Prefers the `_is_saved` annotation (set on list querysets) and falls
+    back to a direct lookup so the field is correct on any endpoint."""
+
+    def get_is_saved(self, obj):
+        annotated = getattr(obj, "_is_saved", None)
+        if annotated is not None:
+            return annotated
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return SavedMaster.objects.filter(user=request.user, master=obj).exists()
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -58,13 +74,14 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ["author_name", "created_at"]
 
 
-class MasterListSerializer(serializers.ModelSerializer):
+class MasterListSerializer(SavedStateMixin, serializers.ModelSerializer):
     """Compact payload for search results / cards."""
 
     min_price = serializers.SerializerMethodField()
     discount_percent = serializers.SerializerMethodField()
     services_count = serializers.IntegerField(source="services.count", read_only=True)
     distance_km = serializers.SerializerMethodField()
+    is_saved = serializers.SerializerMethodField()
 
     class Meta:
         model = MasterProfile
@@ -83,6 +100,7 @@ class MasterListSerializer(serializers.ModelSerializer):
             "discount_percent",
             "services_count",
             "distance_km",
+            "is_saved",
         ]
 
     def _cheapest_service(self, obj):
@@ -111,11 +129,12 @@ class MasterListSerializer(serializers.ModelSerializer):
         return round(d, 1) if d is not None else None
 
 
-class MasterDetailSerializer(serializers.ModelSerializer):
+class MasterDetailSerializer(SavedStateMixin, serializers.ModelSerializer):
     services = ServiceSerializer(many=True, read_only=True)
     working_hours = WorkingHoursSerializer(many=True, read_only=True)
     discounts = serializers.SerializerMethodField()
     reviews = ReviewSerializer(many=True, read_only=True)
+    is_saved = serializers.SerializerMethodField()
 
     class Meta:
         model = MasterProfile
@@ -137,6 +156,7 @@ class MasterDetailSerializer(serializers.ModelSerializer):
             "working_hours",
             "discounts",
             "reviews",
+            "is_saved",
             "created_at",
         ]
 

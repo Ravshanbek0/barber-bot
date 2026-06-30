@@ -128,3 +128,19 @@ class Review(models.Model):
     class Meta:
         ordering = ["-created_at"]
         unique_together = ("master", "author")
+
+
+class SavedMaster(models.Model):
+    """A client bookmarks a master so they can find them again quickly."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_masters"
+    )
+    master = models.ForeignKey(
+        MasterProfile, on_delete=models.CASCADE, related_name="saved_by"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ("user", "master")

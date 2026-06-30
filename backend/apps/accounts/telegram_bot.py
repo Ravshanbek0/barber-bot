@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 API = "https://api.telegram.org/bot{token}/sendMessage"
 EDIT_API = "https://api.telegram.org/bot{token}/editMessageText"
+DELETE_API = "https://api.telegram.org/bot{token}/deleteMessage"
 
 
 def _safe_print(text: str) -> None:
@@ -76,4 +77,25 @@ def edit_message_text(chat_id, message_id, text: str, reply_markup=None) -> bool
         return resp.ok
     except requests.RequestException as exc:
         log.warning("Telegram editMessageText error: %s", exc)
+        return False
+
+
+def delete_message(chat_id, message_id) -> bool:
+    """Delete a previously sent message. Used to clear the client's old status
+    card before sending a fresh one, so a status change pings them (a push) yet
+    only one card per booking remains. Best-effort — failures are ignored."""
+    token = settings.TELEGRAM_BOT_TOKEN
+    if not token or not chat_id or not message_id:
+        if settings.OTP_DEV_PRINT:
+            _safe_print(f"[DEV TG DEL] -> {chat_id}#{message_id}")
+        return False
+    try:
+        resp = requests.post(
+            DELETE_API.format(token=token),
+            json={"chat_id": chat_id, "message_id": message_id},
+            timeout=5,
+        )
+        return resp.ok
+    except requests.RequestException as exc:
+        log.warning("Telegram deleteMessage error: %s", exc)
         return False

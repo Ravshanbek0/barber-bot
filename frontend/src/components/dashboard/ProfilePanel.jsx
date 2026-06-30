@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { api } from "../../api/client";
 import { getPosition, reverseGeocode, openLocationSettings } from "../../lib/geo";
-import ShareCard from "./ShareCard.jsx";
 
 const money = (n) => new Intl.NumberFormat("uz-UZ").format(n);
 
@@ -90,8 +89,6 @@ export default function ProfilePanel({ profile, onChange }) {
 
   return (
     <div className="stack gap-4">
-      <ShareCard handle={profile.handle} displayName={profile.display_name} />
-
       {/* Profile fields */}
       <div className="card card-pad">
         <h3>Profil</h3>

@@ -175,6 +175,7 @@ function BookingDetail({ booking: b, iAmMaster, onClose, onSetStatus, onReview }
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="sheet-x" onClick={onClose} aria-label="Yopish">✕</button>
         <div className="sheet-grab" />
         <div className="row between">
           <h3>Bron tafsilotlari</h3>
@@ -286,6 +287,7 @@ function ReviewSheet({ booking, onClose }) {
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="sheet-x" onClick={onClose} aria-label="Yopish">✕</button>
         <div className="sheet-grab" />
         {done ? (
           <div className="center" style={{ padding: "12px 0" }}>

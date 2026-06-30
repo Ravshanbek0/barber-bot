@@ -1,6 +1,6 @@
 from math import asin, cos, radians, sin, sqrt
 
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.utils.text import slugify
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -18,6 +18,7 @@ from .models import (
     Discount,
     MasterProfile,
     Review,
+    SavedMaster,
     Service,
     WorkingHours,
 )
@@ -61,9 +62,17 @@ class MasterViewSet(viewsets.ModelViewSet):
             MasterProfile.objects.select_related("user")
             .prefetch_related("services", "working_hours", "discounts", "reviews")
         )
+        user = self.request.user
+        # Flag each master with whether this user bookmarked it (one extra
+        # subquery, no N+1) so cards can render the saved state.
+        if user.is_authenticated:
+            qs = qs.annotate(
+                _is_saved=Exists(
+                    SavedMaster.objects.filter(user=user, master=OuterRef("pk"))
+                )
+            )
         if self.action == "list":
             return qs.filter(is_active=True)
-        user = self.request.user
         if user.is_authenticated:
             return qs.filter(Q(is_active=True) | Q(user=user))
         return qs.filter(is_active=True)
@@ -222,6 +231,36 @@ class MasterViewSet(viewsets.ModelViewSet):
         record(request.user, kind="review_created",
                description=f"{master.display_name} — {serializer.validated_data['rating']}⭐")
         return Response(MasterDetailSerializer(master, context={"request": request}).data)
+
+    @action(detail=True, methods=["post", "delete"], permission_classes=[permissions.IsAuthenticated])
+    def save(self, request, handle=None):
+        """Bookmark (POST) or remove the bookmark (DELETE) for this master."""
+        master = self.get_object()
+        if request.method == "DELETE":
+            SavedMaster.objects.filter(user=request.user, master=master).delete()
+            return Response({"is_saved": False})
+        SavedMaster.objects.get_or_create(user=request.user, master=master)
+        return Response({"is_saved": True}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def saved(self, request):
+        """Masters the current client has bookmarked, newest first."""
+        saved_ids = list(
+            SavedMaster.objects.filter(user=request.user)
+            .order_by("-created_at")
+            .values_list("master_id", flat=True)
+        )
+        by_id = {
+            m.id: m
+            for m in MasterProfile.objects.filter(id__in=saved_ids, is_active=True)
+            .select_related("user")
+            .prefetch_related("services", "working_hours", "discounts", "reviews")
+        }
+        ordered = [by_id[i] for i in saved_ids if i in by_id]
+        for m in ordered:
+            m._is_saved = True
+        serializer = MasterListSerializer(ordered, many=True, context={"request": request})
+        return Response(serializer.data)
 
 
 class _OwnedBase(viewsets.ModelViewSet):

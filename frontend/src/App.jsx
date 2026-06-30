@@ -5,6 +5,8 @@ import TopBar from "./components/TopBar.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import ShareFab from "./components/ShareFab.jsx";
 import RealtimeListener from "./components/RealtimeListener.jsx";
+import BecomeMasterModal from "./components/BecomeMasterModal.jsx";
+import { ClientOnboarding, MasterOnboarding } from "./components/Onboarding.jsx";
 import Search from "./pages/Search.jsx";
 import MasterDetail from "./pages/MasterDetail.jsx";
 import MyBookings from "./pages/MyBookings.jsx";
@@ -46,6 +48,9 @@ function Shell() {
         </main>
         <ShareFab />
         <BottomNav />
+        <BecomeMasterModal />
+        <ClientOnboarding />
+        <MasterOnboarding />
       </div>
   );
 }

@@ -158,6 +158,15 @@ class BookingViewSet(viewsets.ModelViewSet):
         day_start = start_at.replace(hour=0, minute=0, second=0, microsecond=0)
         active_count = _active_bookings_for_day(master, day_start).count()
 
+        # No name typed → auto-number the walk-in ("Mijoz 1", "Mijoz 2", …) so the
+        # master can add clients fast without entering a name each time. Counts
+        # today's existing walk-ins (booking with no account) for this master.
+        if not name:
+            walkin_count = _active_bookings_for_day(master, day_start).filter(
+                client__isnull=True
+            ).count()
+            name = f"Mijoz {walkin_count + 1}"
+
         booking = Booking.objects.create(
             client=None,
             master=master,

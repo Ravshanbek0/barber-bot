@@ -91,3 +91,20 @@ def rating_keyboard(booking):
         for n in range(1, 6)
     ]
     return {"inline_keyboard": [row]}
+
+
+def confirm_request_text(booking, minutes):
+    """Pre-visit confirmation request sent 15 then 5 minutes before the start."""
+    return (
+        f"⏰ <b>Navbatingizgacha {minutes} daqiqa</b>\n"
+        f"{booking.master.display_name} · {booking.services_label()}\n"
+        f"🗓 {when_str(booking)}\n"
+        f"Iltimos, kelishingizni tasdiqlang."
+    )
+
+
+def confirm_visit_keyboard(booking):
+    """Single 'I'll come' button so the client confirms an upcoming visit."""
+    return {"inline_keyboard": [[
+        {"text": "✅ Kelaman, tasdiqlayman", "callback_data": f"visit_ok:{booking.id}"}
+    ]]}

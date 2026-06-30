@@ -68,6 +68,7 @@ export default function ShareFab() {
       {open && (
         <div className="sheet-overlay" onClick={() => setOpen(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <button className="sheet-x" onClick={() => setOpen(false)} aria-label="Yopish">✕</button>
             <div className="sheet-grab" />
             <h3 className="center">Mijozlarni taklif qiling</h3>
             <p className="muted center mt-1" style={{ fontSize: "var(--fs-sm)" }}>

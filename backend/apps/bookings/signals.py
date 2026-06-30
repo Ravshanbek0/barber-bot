@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from apps.accounts.telegram_bot import edit_message_text, send_message
+from apps.accounts.telegram_bot import delete_message, edit_message_text, send_message
 
 from .models import Booking
 from .serializers import BookingSerializer
@@ -77,19 +77,19 @@ def _dispatch_notifications(booking_pk, created):
         if fields:
             Booking.objects.filter(pk=instance.pk).update(**fields)
     else:
-        # Status changed — update the client's single card in place. On
-        # completion add the rating buttons (unless already reviewed).
+        # Status changed — the client should get a *push* (a fresh message), but
+        # still see only one card per booking. So delete the old card and send a
+        # new one (editing in place wouldn't notify them). On completion add the
+        # rating buttons (unless already reviewed).
         if client_tg and instance.client_id:
             markup = None
             if instance.status == Booking.Status.COMPLETED and not _already_reviewed(instance):
                 markup = rating_keyboard(instance)
             if instance.client_message_id:
-                edit_message_text(
-                    client_tg, instance.client_message_id, client_card(instance), reply_markup=markup
-                )
-            else:
-                # Older booking with no stored card — fall back to a new message.
-                send_message(client_tg, client_card(instance), reply_markup=markup)
+                delete_message(client_tg, instance.client_message_id)
+            new_msg = send_message(client_tg, client_card(instance), reply_markup=markup)
+            if new_msg:
+                Booking.objects.filter(pk=instance.pk).update(client_message_id=new_msg)
         # Keep the master's card in sync too — buttons reflect the new status
         # (and clear on terminal states). Runs server-side, so it works even
         # when the change came from the dashboard.

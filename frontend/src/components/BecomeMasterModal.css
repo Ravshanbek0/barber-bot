@@ -1,0 +1,60 @@
+.promo-sheet {
+  position: relative;
+  text-align: center;
+}
+
+.promo-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s ease, color .15s ease;
+}
+.promo-x:hover { background: var(--surface-3); color: var(--text); }
+
+.promo-art {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 2px;
+}
+
+.promo-title { font-size: var(--fs-xl); }
+.promo-text { font-size: var(--fs-sm); }
+
+.promo-perks {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  text-align: left;
+}
+.promo-perks li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px 0;
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+}
+.promo-dot {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--brass-soft);
+  color: var(--brass);
+  font-size: 12px;
+  font-weight: 800;
+}

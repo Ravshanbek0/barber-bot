@@ -105,6 +105,7 @@ export default function PhoneVerify({ title = "Raqamingizni tasdiqlang", onVerif
   return (
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="sheet-x" onClick={onClose} aria-label="Yopish">✕</button>
         <div className="sheet-grab" />
         <h3>{title}</h3>
 

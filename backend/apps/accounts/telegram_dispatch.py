@@ -110,10 +110,17 @@ class TelegramBot:
                     return
 
             recents = self._recent_masters(chat_id)
-            rows = [[{"text": "💈 Ilovani ochish", "web_app": {"url": self.url}}]]
-            # Masters get a one-tap shortcut to manage their incoming bookings.
-            if self._is_master(chat_id):
+            is_master = self._is_master(chat_id)
+            # Clients open the app with ?promo=master so the Mini App greets them
+            # with the "become a master" modal; masters open it clean.
+            open_url = self.url if is_master else f"{base}/?promo=master"
+            rows = [[{"text": "💈 Ilovani ochish", "web_app": {"url": open_url}}]]
+            if is_master:
+                # Masters get a one-tap shortcut to manage their incoming bookings.
                 rows.append([{"text": "📋 Bronlar", "callback_data": "bookings"}])
+            else:
+                # Clients get a direct path into the become-a-master flow.
+                rows.append([{"text": "✂️ Usta bo'lish", "web_app": {"url": f"{base}/profile?become=1"}}])
             # One-tap re-booking with masters the user has visited before.
             for handle, name in recents:
                 rows.append([
@@ -206,6 +213,11 @@ class TelegramBot:
             self._handle_rate(cq_id, chat_id, message_id, from_id, parts[1], parts[2])
             return
 
+        # visit_ok:<booking_id> — client confirms an upcoming visit.
+        if action == "visit_ok" and len(parts) == 2:
+            self._handle_visit_ok(cq_id, chat_id, message_id, from_id, parts[1])
+            return
+
         # Master status actions: <action>:<booking_id>
         status_map = {
             "confirm": Booking.Status.CONFIRMED,
@@ -250,6 +262,26 @@ class TelegramBot:
             chat_id, message_id, booking_text(booking), master_keyboard(booking)
         )
         self._answer_callback(cq_id, "Bajarildi ✅")
+
+    def _handle_visit_ok(self, cq_id, chat_id, message_id, from_id, booking_id):
+        from apps.bookings.models import Booking
+
+        booking = (
+            Booking.objects.filter(id=booking_id).select_related("client").first()
+        )
+        if not booking or not booking.client_id:
+            self._answer_callback(cq_id, "Bron topilmadi", alert=True)
+            return
+        if booking.client.telegram_id != from_id:
+            self._answer_callback(cq_id, "Ruxsat yo'q", alert=True)
+            return
+        # update() avoids re-firing the booking post_save notifications.
+        Booking.objects.filter(pk=booking.pk).update(client_confirmed=True)
+        self._edit_message(
+            chat_id, message_id,
+            "✅ Rahmat! Kelishingiz tasdiqlandi.", None,
+        )
+        self._answer_callback(cq_id, "Tasdiqlandi ✅")
 
     def _handle_rate(self, cq_id, chat_id, message_id, from_id, booking_id, stars):
         from apps.bookings.models import Booking

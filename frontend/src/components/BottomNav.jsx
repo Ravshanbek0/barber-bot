@@ -26,16 +26,16 @@ export default function BottomNav() {
 
   const tabs = isMaster
     ? [
-        { to: "/dashboard", label: "Navbat", icon: "queue" },
-        { to: "/bookings", label: "Bronlar", icon: "calendar" },
-        { to: "/chat", label: "Xabarlar", icon: "chat" },
-        { to: "/profile", label: "Profil", icon: "user" },
+        { to: "/dashboard", label: "Navbat", icon: "queue", tour: "nav-primary" },
+        { to: "/bookings", label: "Bronlar", icon: "calendar", tour: "nav-bookings" },
+        { to: "/chat", label: "Xabarlar", icon: "chat", tour: "nav-chat" },
+        { to: "/profile", label: "Profil", icon: "user", tour: "nav-profile" },
       ]
     : [
-        { to: "/", label: "Ustalar", icon: "search" },
-        { to: "/bookings", label: "Bronlar", icon: "calendar" },
-        { to: "/chat", label: "Xabarlar", icon: "chat" },
-        { to: "/profile", label: "Profil", icon: "user" },
+        { to: "/", label: "Ustalar", icon: "search", tour: "nav-primary" },
+        { to: "/bookings", label: "Bronlar", icon: "calendar", tour: "nav-bookings" },
+        { to: "/chat", label: "Xabarlar", icon: "chat", tour: "nav-chat" },
+        { to: "/profile", label: "Profil", icon: "user", tour: "nav-profile" },
       ];
 
   return (
@@ -45,6 +45,7 @@ export default function BottomNav() {
           key={t.to}
           to={t.to}
           end={t.to === "/"}
+          data-tour={t.tour}
           className={({ isActive }) => `tab ${isActive ? "active" : ""}`}
           onClick={() => haptic("light")}
         >

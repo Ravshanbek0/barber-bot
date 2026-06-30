@@ -1,68 +1,33 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
 import { useSocket } from "../hooks/useSocket";
 import "./Dashboard.css";
 
 import QueuePanel from "../components/dashboard/QueuePanel.jsx";
-import HoursPanel from "../components/dashboard/HoursPanel.jsx";
 import DiscountPanel from "../components/dashboard/DiscountPanel.jsx";
-import ProfilePanel from "../components/dashboard/ProfilePanel.jsx";
 
+// The "Navbat" page holds the day-to-day operations: the live queue and the
+// promotions. Profile + working hours live on the Profil page instead.
 const TABS = [
   { key: "queue", label: "Navbat" },
-  { key: "hours", label: "Ish vaqti" },
   { key: "discounts", label: "Chegirmalar" },
-  { key: "profile", label: "Profil" },
 ];
-
-const MISSING_LABELS = {
-  phone: "telefon raqami (tasdiqlash)",
-  display_name: "ism",
-  location: "joylashuv (geolokatsiya)",
-  services: "kamida 1 ta xizmat",
-  hours: "ish vaqti",
-};
 
 export default function Dashboard() {
   const [tab, setTab] = useState("queue");
   const [profile, setProfile] = useState(null);
   const [toast, setToast] = useState(null);
   const [queueVersion, setQueueVersion] = useState(0);
-  const [publishMsg, setPublishMsg] = useState("");
-  const [publishing, setPublishing] = useState(false);
-  const firstLoad = useRef(true);
+  const navigate = useNavigate();
 
   const loadProfile = () =>
-    api.get("/masters/me/").then(({ data }) => {
-      setProfile(data);
-      // Fresh masters land on a draft — open the Profil tab so they fill it in.
-      if (firstLoad.current) {
-        firstLoad.current = false;
-        if (!data.is_active) setTab("profile");
-      }
-    }).catch(() => setProfile(false));
+    api.get("/masters/me/")
+      .then(({ data }) => setProfile(data))
+      .catch(() => setProfile(false));
 
   useEffect(() => { loadProfile(); }, []);
-
-  const publish = async () => {
-    setPublishMsg(""); setPublishing(true);
-    try {
-      await api.post("/masters/publish/");
-      setToast("✅ Profilingiz e'lon qilindi!");
-      setTimeout(() => setToast(null), 4000);
-      loadProfile();
-    } catch (e) {
-      const missing = e.response?.data?.missing || [];
-      setPublishMsg(
-        missing.length
-          ? "To'ldiring: " + missing.map((m) => MISSING_LABELS[m] || m).join(", ")
-          : "E'lon qilinmadi."
-      );
-    } finally {
-      setPublishing(false);
-    }
-  };
 
   useSocket("/ws/notifications/", (data) => {
     if (data.event === "booking.created") {
@@ -96,17 +61,16 @@ export default function Dashboard() {
         <div className="card card-pad mt-4" style={{ borderColor: "var(--brass)" }}>
           <strong>Profilingiz hali ko'rinmaydi</strong>
           <p className="muted mt-1" style={{ fontSize: "var(--fs-sm)" }}>
-            Mijozlar topishi uchun majburiy maydonlarni to'ldiring: telefon tasdiqlash,
-            joylashuv (geolokatsiya), kamida 1 ta xizmat va ish vaqti.
+            Profil sahifasida ma'lumot, ish vaqti va xizmatlarni to'ldiring,
+            so'ng e'lon qiling.
           </p>
-          {publishMsg && <p className="mt-2" style={{ color: "var(--danger)", fontSize: "var(--fs-sm)" }}>{publishMsg}</p>}
-          <button className="btn btn-primary btn-block mt-3" disabled={publishing} onClick={publish}>
-            {publishing ? "Tekshirilmoqda…" : "E'lon qilish"}
+          <button className="btn btn-primary btn-block mt-3" onClick={() => navigate("/profile")}>
+            Profilni to'ldirish
           </button>
         </div>
       )}
 
-      <div className="dash-tabs mt-4">
+      <div className="dash-tabs mt-4" data-tour="dash-tabs">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -119,10 +83,8 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-4">
-        {tab === "queue" && <QueuePanel handle={profile.handle} services={profile.services} version={queueVersion} published={profile.is_active} />}
-        {tab === "hours" && <HoursPanel profile={profile} onChange={loadProfile} />}
+        {tab === "queue" && <QueuePanel profile={profile} version={queueVersion} />}
         {tab === "discounts" && <DiscountPanel profile={profile} onChange={loadProfile} />}
-        {tab === "profile" && <ProfilePanel profile={profile} onChange={loadProfile} />}
       </div>
 
       {toast && <div className="toast">{toast}</div>}

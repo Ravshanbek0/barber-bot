@@ -5,6 +5,23 @@
   padding: var(--space-3);
   transition: border-color .15s ease, transform .12s ease, background .15s ease;
 }
+
+/* Save (favourite) heart — inline next to the rating. */
+.mcard-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  transition: color .15s ease, background .15s ease, transform .1s ease;
+}
+.mcard-save:hover { background: var(--surface-3); color: var(--text-soft); }
+.mcard-save:active { transform: scale(0.9); }
+.mcard-save.is-saved { color: var(--danger); border-color: transparent; background: var(--danger-soft); }
 .mcard:active { transform: scale(0.99); }
 .mcard:hover { border-color: var(--border); background: var(--surface-2); }
 
