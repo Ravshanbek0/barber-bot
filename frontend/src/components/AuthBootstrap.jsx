@@ -23,21 +23,35 @@ export default function AuthBootstrap({ children }) {
     initTelegram();
   }, []);
 
-  // Re-runs whenever `user` goes back to null — including when an invalid
-  // token (e.g. the account's user row no longer exists on the backend)
-  // gets logged out mid-session. Without this, the app got stuck on the
-  // spinner forever after such a logout, since sign-in only ever ran once.
+  // Always re-verifies identity against the CURRENT launch's Telegram
+  // initData, even if a session is already cached in localStorage. This is
+  // required because several Telegram accounts on the same device/client
+  // (e.g. Telegram Desktop's multi-account switcher) can end up sharing the
+  // same WebView storage — without this check, whichever account logged in
+  // first would leak its session (bookings, master profile, etc.) into
+  // every other account that opens the same Mini App. If the verified user
+  // differs from the cached one, the cached session is replaced.
+  //
+  // This effect also re-runs whenever `user` goes back to null — e.g. when
+  // an invalid token (the account's row no longer exists on the backend)
+  // gets logged out mid-session — so the app re-signs in instead of getting
+  // stuck on the spinner forever.
   useEffect(() => {
-    if (user) return; // already signed in
-
     const endpoint = isTelegram()
       ? [`${BASE}/auth/telegram/webapp/`, { init_data: getInitData() }]
       : [`${BASE}/auth/dev-login/`, {}]; // browser dev → regular user
 
     axios
       .post(...endpoint)
-      .then(({ data }) => setSession({ user: data.user, tokens: data.tokens }))
-      .catch(() => setStatus("error"));
+      .then(({ data }) => {
+        const current = useAuth.getState().user;
+        if (!current || current.id !== data.user.id) {
+          setSession({ user: data.user, tokens: data.tokens });
+        }
+      })
+      .catch(() => {
+        if (!useAuth.getState().user) setStatus("error");
+      });
   }, [user]);
 
   if (user) return children;
