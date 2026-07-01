@@ -21,6 +21,13 @@ export default function AuthBootstrap({ children }) {
 
   useEffect(() => {
     initTelegram();
+  }, []);
+
+  // Re-runs whenever `user` goes back to null — including when an invalid
+  // token (e.g. the account's user row no longer exists on the backend)
+  // gets logged out mid-session. Without this, the app got stuck on the
+  // spinner forever after such a logout, since sign-in only ever ran once.
+  useEffect(() => {
     if (user) return; // already signed in
 
     const endpoint = isTelegram()
@@ -31,8 +38,7 @@ export default function AuthBootstrap({ children }) {
       .post(...endpoint)
       .then(({ data }) => setSession({ user: data.user, tokens: data.tokens }))
       .catch(() => setStatus("error"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   if (user) return children;
 
