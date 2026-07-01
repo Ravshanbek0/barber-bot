@@ -58,12 +58,27 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
     const { tokens, setTokens, logout } = useAuth.getState();
-    if (error.response?.status === 401 && tokens?.refresh && !original._retry) {
+    if (error.response?.status !== 401) return Promise.reject(error);
+
+    // simplejwt's refresh endpoint only checks the refresh token's own
+    // signature/expiry — it does NOT verify the user it points to still
+    // exists. So refreshing can "succeed" and still hand back a token for a
+    // deleted account, which then 401s again on retry. If we get a 401 on a
+    // request we already retried once with a freshly refreshed token, the
+    // account itself is gone — no amount of refreshing fixes that, so log
+    // out for real and let the app sign in as a new guest.
+    if (original._retriedAfterRefresh) {
+      logout();
+      return Promise.reject(error);
+    }
+
+    if (tokens?.refresh && !original._retry) {
       original._retry = true;
       try {
         const { data } = await refreshAccessToken(tokens.refresh);
         setTokens({ ...tokens, access: data.access });
         original.headers.Authorization = `Bearer ${data.access}`;
+        original._retriedAfterRefresh = true;
         return api(original);
       } catch (e) {
         logout();
