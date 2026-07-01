@@ -24,6 +24,12 @@ WELCOME = (
     "Boshlash uchun pastdagi tugmani bosing."
 )
 
+# Persistent reply-keyboard button labels (plain text, since custom keyboards
+# — unlike inline ones — can't carry callback_data). Tapping either sends this
+# exact text back as a normal message, matched in ``handle_update``.
+BOOKINGS_BUTTON = "📋 Bronlar"
+RECENTS_BUTTON = "🕓 So'nggi ustalar"
+
 
 class TelegramBot:
     """Stateless-ish handler holding the bot token + Mini App URL."""
@@ -83,9 +89,18 @@ class TelegramBot:
             })
             return
 
-        # Master pulls up their bookings list (also reachable via the /start button).
-        if text.startswith("/bronlar"):
+        # Master pulls up their bookings list (also reachable via the /start
+        # menu button — a plain-text tap, since custom reply keyboards can't
+        # carry callback_data like inline buttons can).
+        if text.startswith("/bronlar") or text == BOOKINGS_BUTTON:
             self._send_master_bookings(chat_id, chat_id)
+            return
+
+        # "Recent masters" menu button — shows the actual list only when
+        # tapped, instead of cluttering the main /start menu with one row per
+        # master the client has ever booked.
+        if text == RECENTS_BUTTON:
+            self._send_recent_masters(chat_id)
             return
 
         if text.startswith("/start"):
@@ -114,27 +129,24 @@ class TelegramBot:
             # Clients open the app with ?promo=master so the Mini App greets them
             # with the "become a master" modal; masters open it clean.
             open_url = self.url if is_master else f"{base}/?promo=master"
+            # A persistent keyboard (docked above the text input, not attached
+            # to this one message) so the main actions stay one tap away
+            # without cluttering this welcome message — especially "recent
+            # masters", which used to add one row per master ever booked.
             rows = [[{"text": "💈 Ilovani ochish", "web_app": {"url": open_url}}]]
             if is_master:
                 # Masters get a one-tap shortcut to manage their incoming bookings.
-                rows.append([{"text": "📋 Bronlar", "callback_data": "bookings"}])
+                rows.append([{"text": BOOKINGS_BUTTON}])
             else:
                 # Clients get a direct path into the become-a-master flow.
                 rows.append([{"text": "✂️ Usta bo'lish", "web_app": {"url": f"{base}/profile?become=1"}}])
-            # One-tap re-booking with masters the user has visited before.
-            for handle, name in recents:
-                rows.append([
-                    {"text": f"↻ {name}", "web_app": {"url": f"{base}/m/{handle}"}}
-                ])
-            extra = (
-                "\n\n♻️ <b>Avvalgi ustalaringiz</b> — qayta bron qilish uchun pastdan tanlang."
-                if recents else ""
-            )
+            if recents:
+                rows.append([{"text": RECENTS_BUTTON}])
             self._call("sendMessage", {
                 "chat_id": chat_id,
-                "text": WELCOME + extra,
+                "text": WELCOME,
                 "parse_mode": "HTML",
-                "reply_markup": {"inline_keyboard": rows},
+                "reply_markup": {"keyboard": rows, "resize_keyboard": True},
             })
 
     def _record_start(self, message, chat_id, param):
@@ -387,6 +399,28 @@ class TelegramBot:
             if len(out) >= limit:
                 break
         return out
+
+    def _send_recent_masters(self, chat_id):
+        """Reveal the client's recently-booked masters as one-tap web_app
+        links, triggered by the persistent "So'nggi ustalar" keyboard button."""
+        recents = self._recent_masters(chat_id)
+        if not recents:
+            self._call("sendMessage", {
+                "chat_id": chat_id,
+                "text": "Hali hech qanday usta bilan bron qilmagansiz.",
+            })
+            return
+        base = self.url.rstrip("/")
+        rows = [
+            [{"text": f"↻ {name}", "web_app": {"url": f"{base}/m/{handle}"}}]
+            for handle, name in recents
+        ]
+        self._call("sendMessage", {
+            "chat_id": chat_id,
+            "text": "♻️ <b>Avvalgi ustalaringiz</b> — qayta bron qilish uchun tanlang.",
+            "parse_mode": "HTML",
+            "reply_markup": {"inline_keyboard": rows},
+        })
 
     # ------------------------------------------------------------------ #
     #  Low-level Telegram API helpers.                                    #

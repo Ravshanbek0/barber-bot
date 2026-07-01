@@ -263,5 +263,6 @@ def run_cron_jobs(request):
         return JsonResponse({"detail": "Ruxsat yo'q"}, status=403)
     out = io.StringIO()
     call_command("send_confirmations", stdout=out)
+    call_command("auto_reject_unconfirmed", stdout=out)
     call_command("send_reminders", stdout=out)
     return JsonResponse({"detail": out.getvalue()})
