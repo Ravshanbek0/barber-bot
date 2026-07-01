@@ -1,24 +1,16 @@
 .md { padding-bottom: 90px; }
 
-/* Pre-booking confirmation consent (#6) */
-.consent-box {
-  background: var(--brass-soft);
-  border: 1px solid var(--brass);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
-}
-.consent-title { font-weight: 700; color: var(--brass); font-size: var(--fs-sm); }
-.consent-text { margin-top: 4px; font-size: var(--fs-sm); color: var(--text-soft); }
+/* Pre-booking confirmation consent (#6) — one compact row, pre-checked by
+   default (see loadConsent in MasterDetail.jsx), not a boxed-in warning. */
 .consent-check {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-3);
   font-size: var(--fs-sm);
-  color: var(--text);
+  color: var(--text-soft);
   cursor: pointer;
 }
-.consent-check input { margin-top: 2px; flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--brass); }
+.consent-check input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--brass); }
 
 .md-cover {
   height: 150px;

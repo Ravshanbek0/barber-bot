@@ -11,6 +11,16 @@ const fmt = (n) => new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
 const DAYS = ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"];
 const DAYS_FULL = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 
+// Pre-visit confirmation consent: asked once, then remembered — defaults to
+// checked so it's not a per-booking chore. Anyone who unchecks it keeps that
+// choice remembered too.
+const CONSENT_KEY = "barber_confirm_consent";
+const loadConsent = () => {
+  const v = localStorage.getItem(CONSENT_KEY);
+  return v === null ? true : v === "1";
+};
+const saveConsent = (v) => localStorage.setItem(CONSENT_KEY, v ? "1" : "0");
+
 export default function MasterDetail() {
   const { handle } = useParams();
   const navigate = useNavigate();
@@ -24,7 +34,7 @@ export default function MasterDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState("");
   const [needPhone, setNeedPhone] = useState(false);
-  const [agreed, setAgreed] = useState(false); // pre-visit confirmation consent
+  const [agreed, setAgreed] = useState(loadConsent); // pre-visit confirmation consent
   const isRegistered = useAuth((s) => !!s.user?.is_registered);
 
   useEffect(() => {
@@ -84,7 +94,7 @@ export default function MasterDetail() {
     setTime("");
     setBookError("");
     setNeedPhone(false);
-    setAgreed(false);
+    setAgreed(loadConsent());
     setSheet(true);
     haptic("light");
   };
@@ -300,20 +310,20 @@ export default function MasterDetail() {
                   <p className="mt-2" style={{ color: "var(--danger)", fontSize: "var(--fs-sm)" }}>{bookError}</p>
                 )}
 
-                {/* Important pre-booking warning + consent (#6). The booking is
-                    only created once the client agrees to the confirmation flow. */}
-                <div className="consent-box mt-3">
-                  <p className="consent-title">⚠️ Muhim eslatma</p>
-                  <p className="consent-text">
-                    Navbatingizga <b>15</b> va <b>5</b> daqiqa qolganda botdan
-                    tasdiqlash so'raladi. Kelishingizni tasdiqlang — aks holda
-                    bron bekor qilinishi mumkin.
-                  </p>
-                  <label className="consent-check">
-                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span>Roziman, tasdiqlash so'rovlariga javob beraman</span>
-                  </label>
-                </div>
+                {/* Pre-visit confirmation consent (#6) — a single-line checkbox,
+                    pre-checked and remembered (loadConsent/saveConsent) so it's
+                    not a per-booking chore. */}
+                <label className="consent-check mt-3">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => {
+                      setAgreed(e.target.checked);
+                      saveConsent(e.target.checked);
+                    }}
+                  />
+                  <span>Navbat vaqtiga yaqin tasdiqlash so'roviga javob beraman</span>
+                </label>
 
                 <button
                   className="btn btn-primary btn-block btn-lg mt-3"
