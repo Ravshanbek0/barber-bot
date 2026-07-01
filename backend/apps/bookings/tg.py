@@ -94,7 +94,7 @@ def rating_keyboard(booking):
 
 
 def confirm_request_text(booking, minutes):
-    """Pre-visit confirmation request sent 15 then 5 minutes before the start."""
+    """Pre-visit confirmation request sent 15 minutes before the start."""
     return (
         f"⏰ <b>Navbatingizgacha {minutes} daqiqa</b>\n"
         f"{booking.master.display_name} · {booking.services_label()}\n"

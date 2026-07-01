@@ -211,3 +211,7 @@ TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 # Public HTTPS URL of THIS backend (used to build the webhook URL). Render
 # injects RENDER_EXTERNAL_URL automatically.
 BACKEND_URL = os.getenv("BACKEND_URL") or os.getenv("RENDER_EXTERNAL_URL", "")
+# Shared secret for POST /api/v1/cron/run/ — an external scheduler (Railway
+# has none on the free tier) calls it every few minutes to run the
+# time-sensitive booking commands (pre-visit confirmations, reminders).
+CRON_SECRET = os.getenv("CRON_SECRET", "")

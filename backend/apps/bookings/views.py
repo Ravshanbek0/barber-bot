@@ -1,9 +1,15 @@
+import io
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from django.conf import settings
+from django.core.management import call_command
 from django.db.models import Q
+from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -203,7 +209,17 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=400,
             )
         booking.status = new_status
-        booking.save(update_fields=["status", "updated_at"])
+        update_fields = ["status", "updated_at"]
+        # Finishing early should free up the rest of the originally booked
+        # slot for new clients — otherwise `taken`/buildSlots keep blocking
+        # the full scheduled window (e.g. 18:00-18:45) even though the
+        # master is actually done at 18:20.
+        if new_status == Booking.Status.COMPLETED:
+            now = timezone.now()
+            if booking.end_at and now < booking.end_at:
+                booking.end_at = max(now, booking.start_at)
+                update_fields.append("end_at")
+        booking.save(update_fields=update_fields)
         return Response(BookingSerializer(booking).data)
 
     @action(detail=False, methods=["get"], url_path="queue/(?P<handle>[^/.]+)")
@@ -232,3 +248,20 @@ class BookingViewSet(viewsets.ModelViewSet):
             status__in=[Booking.Status.PENDING, Booking.Status.CONFIRMED],
         )
         return Response(BookingSerializer(bookings, many=True).data)
+
+
+@csrf_exempt
+@require_POST
+def run_cron_jobs(request):
+    """Runs the time-sensitive booking commands (pre-visit confirmations,
+    reminders) that would otherwise never fire — Railway's free tier has no
+    built-in scheduler, so an external cron service (e.g. cron-job.org, same
+    as the keep-alive pinger) hits this every few minutes instead.
+    """
+    secret = request.headers.get("X-Cron-Secret", "")
+    if not settings.CRON_SECRET or secret != settings.CRON_SECRET:
+        return JsonResponse({"detail": "Ruxsat yo'q"}, status=403)
+    out = io.StringIO()
+    call_command("send_confirmations", stdout=out)
+    call_command("send_reminders", stdout=out)
+    return JsonResponse({"detail": out.getvalue()})
