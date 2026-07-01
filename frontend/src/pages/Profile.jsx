@@ -135,6 +135,7 @@ function ClientProfile() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [becoming, setBecoming] = useState(false);
+  const [becomeError, setBecomeError] = useState(null);
   const [needVerify, setNeedVerify] = useState(false);
   const autoRan = useRef(false);
   const initial = (user?.display_name || "U")[0]?.toUpperCase();
@@ -142,10 +143,16 @@ function ClientProfile() {
 
   const doBecome = async () => {
     setBecoming(true);
+    setBecomeError(null);
     try {
       await api.post("/masters/become/");
       patchUser({ is_master: true, role: "master" });
       navigate("/dashboard");
+    } catch (e) {
+      setBecomeError(
+        e.response?.data?.detail ||
+        "Xatolik yuz berdi. Internetni tekshirib qayta urinib ko'ring."
+      );
     } finally {
       setBecoming(false);
     }
@@ -181,6 +188,7 @@ function ClientProfile() {
       </div>
 
       <div className="stack gap-3 mt-5">
+        {becomeError && <p style={{ color: "var(--danger, #e5484d)" }}>{becomeError}</p>}
         <button className="btn btn-primary btn-lg btn-block" disabled={becoming} onClick={becomeMaster} data-tour="become">
           {becoming ? "Tayyorlanmoqda…" : "Usta bo'lish"}
         </button>

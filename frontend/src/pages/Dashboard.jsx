@@ -95,13 +95,20 @@ export default function Dashboard() {
 function CreateProfile({ onCreated }) {
   const patchUser = useAuth((s) => s.patchUser);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const become = async () => {
     setSaving(true);
+    setError(null);
     try {
       await api.post("/masters/become/");
       patchUser({ is_master: true, role: "master", is_registered: true });
       onCreated();
+    } catch (e) {
+      setError(
+        e.response?.data?.detail ||
+        "Xatolik yuz berdi. Internetni tekshirib qayta urinib ko'ring."
+      );
     } finally {
       setSaving(false);
     }
@@ -116,6 +123,7 @@ function CreateProfile({ onCreated }) {
           Ismingiz Telegramdan olinadi. Bir bosishda boshlang — keyin xizmatlar,
           ish vaqti va rasmlarni qo'shasiz.
         </p>
+        {error && <p className="mt-2" style={{ color: "var(--danger, #e5484d)" }}>{error}</p>}
         <button className="btn btn-primary btn-lg btn-block mt-5" disabled={saving} onClick={become}>
           {saving ? "Tayyorlanmoqda…" : "Usta bo'lish"}
         </button>
