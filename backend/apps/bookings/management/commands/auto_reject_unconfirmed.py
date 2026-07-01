@@ -1,14 +1,16 @@
-"""Auto-cancel a booking if the client never confirmed the 15-min pre-visit ask.
+"""Auto-cancel a booking if the client never confirmed the pre-visit ask
+(15-min, then a 10-min follow-up — see ``send_confirmations``).
 
 Run on a schedule (same cron as ``send_confirmations``/``send_reminders``):
 
     python manage.py auto_reject_unconfirmed
 
-Only applies to bookings that reached the confirmation ask (``confirm_stage``
-== 1) and are still unconfirmed once their start time arrives. Uses
-``.update()` + manual Telegram calls (not ``booking.save()``) so the generic
-status-change notification in ``signals.py`` doesn't also fire — this needs
-its own wording explaining *why* it was cancelled.
+Only applies to bookings that reached at least one confirmation ask
+(``confirm_stage`` >= 1 — 15-min sent, or 15-then-10-min both sent) and are
+still unconfirmed once their start time arrives. Uses ``.update()`` + manual
+Telegram calls (not ``booking.save()``) so the generic status-change
+notification in ``signals.py`` doesn't also fire — this needs its own wording
+explaining *why* it was cancelled.
 """
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -26,7 +28,7 @@ class Command(BaseCommand):
         due = Booking.objects.select_related("master__user", "client").filter(
             status__in=[Booking.Status.PENDING, Booking.Status.CONFIRMED],
             client__isnull=False,
-            confirm_stage=1,
+            confirm_stage__gte=1,
             client_confirmed=False,
             start_at__lte=now,
         )

@@ -48,10 +48,13 @@ class Booking(models.Model):
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     reminder_sent = models.BooleanField(default=False)
-    # Pre-visit confirmation flow: the bot pings the client 15 minutes before
-    # the start. confirm_stage tracks whether that's gone out (0=none,
-    # 1=sent); client_confirmed flips when they tap "I'll come". The client
-    # agrees to this flow (a checkbox) when booking.
+    # Pre-visit confirmation flow: the bot pings the client 15, then again at
+    # 10, minutes before the start if they still haven't answered.
+    # confirm_stage tracks how far that's gone (0=none, 1=15-min sent,
+    # 2=10-min sent); client_confirmed flips when they tap "I'll come". If
+    # they never do, auto_reject_unconfirmed cancels the booking once the
+    # start time arrives. The client agrees to this flow (a checkbox) when
+    # booking.
     confirm_stage = models.PositiveSmallIntegerField(default=0)
     client_confirmed = models.BooleanField(default=False)
     # Telegram message ids of the booking cards (master's card with action
