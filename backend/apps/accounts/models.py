@@ -47,6 +47,11 @@ class User(AbstractUser):
     # True once the user completes registration: phone (client) or
     # becoming a master via Telegram. False = guest (browse-only).
     is_registered = models.BooleanField(default=False)
+    # True once the client explicitly dismisses the "become a master" promo
+    # with "Hozircha mijoz bo'lib qolaman" (not the bare ✕, which is just a
+    # this-time dismiss). Stops re-nagging them: hides the bot's persistent
+    # "Usta bo'lish" keyboard button and the Mini App promo modal.
+    declined_master = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
 
     USERNAME_FIELD = "phone"

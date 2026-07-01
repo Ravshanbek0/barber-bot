@@ -137,8 +137,10 @@ class TelegramBot:
             if is_master:
                 # Masters get a one-tap shortcut to manage their incoming bookings.
                 rows.append([{"text": BOOKINGS_BUTTON}])
-            else:
-                # Clients get a direct path into the become-a-master flow.
+            elif not self._declined_master(chat_id):
+                # Clients get a direct path into the become-a-master flow —
+                # unless they already said "Hozircha mijoz bo'lib qolaman" in
+                # the Mini App's promo modal, which stops the nagging for good.
                 rows.append([{"text": "✂️ Usta bo'lish", "web_app": {"url": f"{base}/profile?become=1"}}])
             if recents:
                 rows.append([{"text": RECENTS_BUTTON}])
@@ -327,6 +329,12 @@ class TelegramBot:
         from apps.masters.models import MasterProfile
 
         return MasterProfile.objects.filter(user__telegram_id=tg_id).exists()
+
+    def _declined_master(self, tg_id):
+        """True if this client already said 'Hozircha mijoz bo'lib qolaman'."""
+        from apps.accounts.models import User
+
+        return User.objects.filter(telegram_id=tg_id, declined_master=True).exists()
 
     def _master_by_handle(self, handle):
         """Look up a master by their @handle (for share deep links)."""

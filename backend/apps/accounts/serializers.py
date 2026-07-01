@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             "telegram_username",
             "is_phone_verified",
             "is_registered",
+            "declined_master",
             "created_at",
         ]
         read_only_fields = [

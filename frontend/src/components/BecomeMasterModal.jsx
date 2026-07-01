@@ -1,4 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from "../api/client";
 import { useAuth } from "../store/auth";
 import { haptic } from "../lib/telegram";
 import "./BecomeMasterModal.css";
@@ -6,20 +7,30 @@ import "./BecomeMasterModal.css";
 /**
  * Promo modal that nudges a client to become a master. Shown when the Mini App
  * is opened with ?promo=master (the bot's "Ilovani ochish" button adds it) and
- * the viewer isn't already a master. Dismissible via the ✕ or the backdrop.
+ * the viewer isn't already a master. Dismissible via the ✕/backdrop (just this
+ * once) or "Hozircha mijoz bo'lib qolaman" (persists — stops the nagging for
+ * good, here and in the bot's persistent keyboard).
  */
 export default function BecomeMasterModal() {
   const isMaster = useAuth((s) => !!s.user?.is_master);
+  const declinedMaster = useAuth((s) => !!s.user?.declined_master);
   const authed = useAuth((s) => !!s.tokens?.access);
+  const patchUser = useAuth((s) => s.patchUser);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const open = params.get("promo") === "master" && authed && !isMaster;
+  const open = params.get("promo") === "master" && authed && !isMaster && !declinedMaster;
   if (!open) return null;
 
   const close = () => {
     params.delete("promo");
     setParams(params, { replace: true });
+  };
+
+  const decline = () => {
+    close();
+    patchUser({ declined_master: true });
+    api.patch("/auth/me/", { declined_master: true }).catch(() => {});
   };
 
   const become = () => {
@@ -50,7 +61,7 @@ export default function BecomeMasterModal() {
         <button className="btn btn-primary btn-lg btn-block mt-4" onClick={become}>
           ✂️ Usta bo'lish
         </button>
-        <button className="btn btn-ghost btn-block mt-2" onClick={close}>
+        <button className="btn btn-ghost btn-block mt-2" onClick={decline}>
           Hozircha mijoz bo'lib qolaman
         </button>
       </div>
