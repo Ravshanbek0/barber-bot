@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../store/auth";
-import { getInitData, initTelegram, isTelegram } from "../lib/telegram";
+import { initTelegram, waitForInitData } from "../lib/telegram";
 import "./AuthBootstrap.css";
 
 const BASE = import.meta.env.VITE_API_BASE || "/api/v1";
@@ -37,21 +37,30 @@ export default function AuthBootstrap({ children }) {
   // gets logged out mid-session — so the app re-signs in instead of getting
   // stuck on the spinner forever.
   useEffect(() => {
-    const endpoint = isTelegram()
-      ? [`${BASE}/auth/telegram/webapp/`, { init_data: getInitData() }]
-      : [`${BASE}/auth/dev-login/`, {}]; // browser dev → regular user
+    let cancelled = false;
+    // Waits briefly for Telegram to actually populate initData (see
+    // waitForInitData) instead of checking once and treating a not-yet-ready
+    // WebView as "not Telegram at all" — that race is what caused a cold
+    // first open to fail while a reopen moments later worked fine.
+    waitForInitData().then((initData) => {
+      if (cancelled) return;
+      const endpoint = initData
+        ? [`${BASE}/auth/telegram/webapp/`, { init_data: initData }]
+        : [`${BASE}/auth/dev-login/`, {}]; // browser dev → regular user
 
-    axios
-      .post(...endpoint)
-      .then(({ data }) => {
-        const current = useAuth.getState().user;
-        if (!current || current.id !== data.user.id) {
-          setSession({ user: data.user, tokens: data.tokens });
-        }
-      })
-      .catch(() => {
-        if (!useAuth.getState().user) setStatus("error");
-      });
+      axios
+        .post(...endpoint)
+        .then(({ data }) => {
+          const current = useAuth.getState().user;
+          if (!current || current.id !== data.user.id) {
+            setSession({ user: data.user, tokens: data.tokens });
+          }
+        })
+        .catch(() => {
+          if (!useAuth.getState().user) setStatus("error");
+        });
+    });
+    return () => { cancelled = true; };
   }, [user]);
 
   if (user) return children;
