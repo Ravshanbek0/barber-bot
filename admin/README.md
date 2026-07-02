@@ -21,14 +21,15 @@ npm run dev        # http://localhost:5174  (/api -> localhost:8000 ga proxy)
 
 Login: yuqorida `create_admin` da bergan telefon + parol.
 
-## Production (Render backend)
+## Production (Railway backend)
 
-Admin paneli ham Vercel'ga alohida loyiha sifatida chiqariladi.
+Admin paneli ham Vercel'ga alohida loyiha sifatida chiqariladi (asosiy Mini
+App'dan mustaqil — bir xil GitHub repo, lekin **Root Directory = `admin`**).
 
-1. **Env**: Vercel'da `VITE_API_BASE=https://<render-servis>.onrender.com/api/v1`.
-2. **Admin akkaunt**: Render Shell'da
+1. **Env**: Vercel'da `VITE_API_BASE=https://<railway-domen>.up.railway.app/api/v1`.
+2. **Admin akkaunt**: Railway → backend servis → **Console** tab'da
    `python manage.py create_admin --phone <tel> --password <parol>`.
-3. **CORS**: Render'da `FRONTEND_ORIGIN` ga admin panel domenini qo'shing
+3. **CORS**: Railway'da `FRONTEND_ORIGIN` ga admin panel domenini qo'shing
    (vergul bilan): `https://<asosiy>.vercel.app,https://<admin>.vercel.app`.
 
 ## Xavfsizlik
