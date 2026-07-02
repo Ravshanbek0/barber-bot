@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../store/auth";
-import { initTelegram, waitForInitData } from "../lib/telegram";
+import { initTelegram, looksLikeTelegramClient, waitForInitData } from "../lib/telegram";
 import "./AuthBootstrap.css";
 
 const BASE = import.meta.env.VITE_API_BASE || "/api/v1";
@@ -45,6 +45,18 @@ export default function AuthBootstrap({ children }) {
     // first open to fail while a reopen moments later worked fine.
     waitForInitData().then((initData) => {
       if (cancelled) return;
+
+      // We're confident this is a real Telegram client (platform is set) but
+      // initData never showed up — a known Telegram Desktop failure mode.
+      // Falling through to dev-login here would just 404 in production
+      // (it's DEBUG-only) and mask the real problem behind a generic error.
+      // Say so plainly instead of guessing at a login endpoint that can't work.
+      if (!initData && looksLikeTelegramClient()) {
+        setErrorDetail(`Telegram initData kelmadi (platform: ${window.Telegram.WebApp.platform}). Botni yangilang yoki mobil ilovada urinib ko'ring.`);
+        setStatus("error");
+        return;
+      }
+
       const endpoint = initData
         ? [`${BASE}/auth/telegram/webapp/`, { init_data: initData }]
         : [`${BASE}/auth/dev-login/`, {}]; // browser dev → regular user

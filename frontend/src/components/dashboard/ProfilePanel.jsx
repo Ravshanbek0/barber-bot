@@ -136,11 +136,23 @@ export default function ProfilePanel({ profile, onChange }) {
           ))}
         </div>
         <div className="stack gap-2 mt-3">
-          <input className="input" placeholder="Xizmat nomi" value={service.name} onChange={(e) => setService({ ...service, name: e.target.value })} />
-          <div className="row gap-2">
-            <input className="input grow" type="number" placeholder="Narx (so'm)" value={service.price} onChange={(e) => setService({ ...service, price: e.target.value })} />
-            <input className="input" style={{ width: 120 }} type="text" inputMode="numeric" placeholder="Daqiqa" value={service.duration_min} onChange={(e) => setService({ ...service, duration_min: e.target.value.replace(/\D/g, "") })} />
+          <div className="field" style={{ margin: 0 }}>
+            <label>Xizmat nomi</label>
+            <input className="input" placeholder="Masalan: Soch olish" value={service.name} onChange={(e) => setService({ ...service, name: e.target.value })} />
           </div>
+          <div className="row gap-2">
+            <div className="field grow" style={{ margin: 0 }}>
+              <label>Narx (so'm)</label>
+              <input className="input" type="number" placeholder="30 000" value={service.price} onChange={(e) => setService({ ...service, price: e.target.value })} />
+            </div>
+            <div className="field" style={{ margin: 0, width: 120 }}>
+              <label>Davomiyligi (daq)</label>
+              <input className="input" type="text" inputMode="numeric" placeholder="30" value={service.duration_min} onChange={(e) => setService({ ...service, duration_min: e.target.value.replace(/\D/g, "") })} />
+            </div>
+          </div>
+          <p className="faint" style={{ fontSize: "var(--fs-xs)" }}>
+            Davomiyligi — bu xizmat necha daqiqada bajarilishi. Shu asosida mijozlar uchun bo'sh vaqt oynalari hisoblanadi.
+          </p>
           <button className="btn btn-ghost btn-block" onClick={addService}>Xizmat qo'shish</button>
         </div>
       </div>

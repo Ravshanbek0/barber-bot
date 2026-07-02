@@ -14,6 +14,37 @@ def haversine_km(lat1, lng1, lat2, lng2):
     a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
     return 2 * 6371 * asin(sqrt(a))
 
+
+def _missing_publish_fields(profile, user):
+    """Fields still needed to go live: phone, display_name, city, a service,
+    working hours. Shared by the explicit "E'lon qilish" action and the
+    auto-publish check below so the two can never disagree."""
+    missing = []
+    if not user.is_registered:
+        missing.append("phone")
+    if not profile.display_name or profile.display_name == "Yangi usta":
+        missing.append("display_name")
+    if profile.latitude is None or profile.longitude is None:
+        missing.append("location")
+    if not profile.services.filter(is_active=True).exists():
+        missing.append("services")
+    if not profile.working_hours.exists():
+        missing.append("hours")
+    return missing
+
+
+def _try_auto_publish(profile, user):
+    """Publishes the moment every requirement is met, instead of making the
+    master remember to come back and press "E'lon qilish" separately. Called
+    after every save that could complete the checklist (profile edit, adding
+    a service, saving working hours)."""
+    if profile.is_active or _missing_publish_fields(profile, user):
+        return
+    profile.is_active = True
+    profile.save(update_fields=["is_active"])
+    record(user, kind="published",
+           description=f"@{profile.handle} profili avtomatik e'lon qilindi")
+
 from .models import (
     Discount,
     MasterProfile,
@@ -100,6 +131,10 @@ class MasterViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
+    def perform_update(self, serializer):
+        profile = serializer.save()
+        _try_auto_publish(profile, self.request.user)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
         # Creating a profile promotes the account to a master.
@@ -173,24 +208,16 @@ class MasterViewSet(viewsets.ModelViewSet):
     def publish(self, request):
         """Go live: requires verified phone + required profile fields filled.
 
-        Required: phone, display_name, city, >=1 service, working hours.
+        Required: phone, display_name, city, >=1 service, working hours. In
+        practice publishing now happens automatically the moment the last of
+        these is saved (see _try_auto_publish) — this action stays as a manual
+        fallback and to surface a clear "what's missing" list on demand.
         """
         profile = MasterProfile.objects.filter(user=request.user).first()
         if not profile:
             return Response({"detail": "Profil topilmadi"}, status=404)
 
-        missing = []
-        if not request.user.is_registered:
-            missing.append("phone")
-        if not profile.display_name or profile.display_name == "Yangi usta":
-            missing.append("display_name")
-        if profile.latitude is None or profile.longitude is None:
-            missing.append("location")
-        if not profile.services.filter(is_active=True).exists():
-            missing.append("services")
-        if not profile.working_hours.exists():
-            missing.append("hours")
-
+        missing = _missing_publish_fields(profile, request.user)
         if missing:
             return Response(
                 {"detail": "Majburiy maydonlar to'ldirilmagan", "missing": missing},
@@ -272,7 +299,9 @@ class _OwnedBase(viewsets.ModelViewSet):
         return MasterProfile.objects.filter(user=self.request.user).first()
 
     def perform_create(self, serializer):
-        serializer.save(master=self._master())
+        master = self._master()
+        serializer.save(master=master)
+        _try_auto_publish(master, self.request.user)
 
 
 class ServiceViewSet(_OwnedBase):
@@ -301,8 +330,9 @@ class WorkingHoursViewSet(_OwnedBase):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        master = self._master()
         obj, created = WorkingHours.objects.update_or_create(
-            master=self._master(),
+            master=master,
             weekday=data["weekday"],
             defaults={
                 "start_time": data["start_time"],
@@ -310,6 +340,7 @@ class WorkingHoursViewSet(_OwnedBase):
                 "is_day_off": data.get("is_day_off", False),
             },
         )
+        _try_auto_publish(master, self.request.user)
         out = self.get_serializer(obj)
         code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(out.data, status=code)
