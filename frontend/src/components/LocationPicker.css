@@ -1,0 +1,22 @@
+.location-picker-sheet { max-width: 480px; }
+
+.map-wrap {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+}
+
+.map-box { height: 320px; width: 100%; }
+
+/* Fixed at the container center — the map pans underneath it, so its tip
+   (not its visual center) marks the selected coordinate. */
+.map-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  font-size: 32px;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}

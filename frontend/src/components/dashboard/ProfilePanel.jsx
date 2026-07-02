@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../../api/client";
 import { getPosition, reverseGeocode, openLocationSettings } from "../../lib/geo";
+import LocationPicker from "../LocationPicker.jsx";
 
 const money = (n) => new Intl.NumberFormat("uz-UZ").format(n);
 
@@ -18,6 +19,7 @@ export default function ProfilePanel({ profile, onChange }) {
   const [locating, setLocating] = useState(false);
   const [locMsg, setLocMsg] = useState("");
   const [locDenied, setLocDenied] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const hasLocation = profile.latitude != null && profile.longitude != null;
   const canSave = form.display_name.trim().length > 0;
 
@@ -32,6 +34,24 @@ export default function ProfilePanel({ profile, onChange }) {
       setSaveMsg("❌ Saqlanmadi. Internetni tekshirib qayta urinib ko'ring.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Shared by both location entry points (GPS detect + map pick): reverse
+  // geocode for a friendly city name (best-effort, never blocks) then save.
+  const saveLocation = async (coords) => {
+    setLocMsg(""); setLocating(true);
+    try {
+      const city = await reverseGeocode(coords.lat, coords.lng);
+      await api.patch(`/masters/${profile.handle}/`, {
+        latitude: coords.lat, longitude: coords.lng, city,
+      });
+      setLocMsg(`✅ Belgilandi: ${city || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`}`);
+      onChange?.();
+    } catch {
+      setLocMsg("❌ Joylashuv saqlanmadi. Server javob bermayapti — keyinroq urinib ko'ring.");
+    } finally {
+      setLocating(false);
     }
   };
 
@@ -57,19 +77,13 @@ export default function ProfilePanel({ profile, onChange }) {
       return;
     }
 
-    // Step 2: persist the coordinates. City lookup is best-effort (never blocks).
-    try {
-      const city = await reverseGeocode(coords.lat, coords.lng);
-      await api.patch(`/masters/${profile.handle}/`, {
-        latitude: coords.lat, longitude: coords.lng, city,
-      });
-      setLocMsg(`✅ Aniqlandi: ${city || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`}`);
-      onChange?.();
-    } catch {
-      setLocMsg("❌ Joylashuv aniqlandi, lekin serverga saqlanmadi. Server javob bermayapti — keyinroq urinib ko'ring.");
-    } finally {
-      setLocating(false);
-    }
+    setLocating(false);
+    await saveLocation(coords);
+  };
+
+  const confirmFromMap = async (coords) => {
+    setPickerOpen(false);
+    await saveLocation(coords);
   };
 
   const addService = async () => {
@@ -97,9 +111,14 @@ export default function ProfilePanel({ profile, onChange }) {
 
         <div className="field">
           <label>Joylashuv (geolokatsiya)</label>
-          <button className="btn btn-ghost btn-block" disabled={locating} onClick={detectLocation}>
-            {locating ? "Aniqlanmoqda…" : hasLocation ? "📍 Joylashuvni yangilash" : "📍 Joriy joylashuvni aniqlash"}
-          </button>
+          <div className="row gap-2">
+            <button className="btn btn-ghost grow" disabled={locating} onClick={detectLocation}>
+              {locating ? "Aniqlanmoqda…" : hasLocation ? "📍 Joylashuvni yangilash" : "📍 Joriy joylashuvimni ishlatish"}
+            </button>
+            <button className="btn btn-ghost grow" disabled={locating} onClick={() => setPickerOpen(true)}>
+              🗺️ Xaritadan tanlash
+            </button>
+          </div>
           {hasLocation && !locMsg && (
             <p className="faint mt-2" style={{ fontSize: "var(--fs-xs)" }}>
               Belgilangan: {profile.city || `${profile.latitude.toFixed(4)}, ${profile.longitude.toFixed(4)}`}
@@ -156,6 +175,14 @@ export default function ProfilePanel({ profile, onChange }) {
           <button className="btn btn-ghost btn-block" onClick={addService}>Xizmat qo'shish</button>
         </div>
       </div>
+
+      {pickerOpen && (
+        <LocationPicker
+          initial={hasLocation ? { lat: profile.latitude, lng: profile.longitude } : null}
+          onConfirm={confirmFromMap}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
