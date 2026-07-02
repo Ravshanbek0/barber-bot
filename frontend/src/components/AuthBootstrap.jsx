@@ -18,6 +18,7 @@ const BASE = import.meta.env.VITE_API_BASE || "/api/v1";
 export default function AuthBootstrap({ children }) {
   const { user, setSession } = useAuth();
   const [status, setStatus] = useState("loading"); // loading | error
+  const [errorDetail, setErrorDetail] = useState("");
 
   useEffect(() => {
     initTelegram();
@@ -56,8 +57,18 @@ export default function AuthBootstrap({ children }) {
             setSession({ user: data.user, tokens: data.tokens });
           }
         })
-        .catch(() => {
-          if (!useAuth.getState().user) setStatus("error");
+        .catch((err) => {
+          if (useAuth.getState().user) return;
+          // Surface the real reason instead of a generic message — this is
+          // the only diagnostic we get out of a Telegram WebView, where
+          // there's no console to check.
+          const status_ = err.response?.status;
+          const detail = err.response?.data?.detail;
+          const reason = status_
+            ? `${status_}${detail ? `: ${detail}` : ""}`
+            : (err.message || "noma'lum tarmoq xatosi");
+          setErrorDetail(`${reason} · initData: ${initData ? "bor" : "yo'q"}`);
+          setStatus("error");
         });
     });
     return () => { cancelled = true; };
@@ -75,6 +86,11 @@ export default function AuthBootstrap({ children }) {
             <p className="muted mt-2">
               Kirishda xatolik. Ilovani Telegram orqali oching.
             </p>
+            {errorDetail && (
+              <p className="faint mt-1" style={{ fontSize: "var(--fs-xs)", wordBreak: "break-word" }}>
+                {errorDetail}
+              </p>
+            )}
             <button className="btn btn-ghost mt-4" onClick={() => window.location.reload()}>
               Qayta urinish
             </button>
