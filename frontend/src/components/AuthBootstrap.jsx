@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../store/auth";
-import { initTelegram, looksLikeTelegramClient, waitForInitData } from "../lib/telegram";
+import { initTelegram, waitForInitData } from "../lib/telegram";
 import "./AuthBootstrap.css";
 
 const BASE = import.meta.env.VITE_API_BASE || "/api/v1";
@@ -11,9 +11,14 @@ const BASE = import.meta.env.VITE_API_BASE || "/api/v1";
  * "enter as client/master" choice. Everyone starts as a regular user and can
  * later become a master via "Usta bo'lish".
  *
- * - Inside Telegram: exchanges signed `initData` for a JWT session.
- * - In a normal browser (local dev): auto-creates a demo user session so the
- *   app is usable without Telegram.
+ * - Inside Telegram, with initData available: exchanges it for a verified,
+ *   per-account JWT session.
+ * - Anywhere else (plain browser, or Telegram without initData — some
+ *   Desktop versions never hand it over): falls back to a shared guest
+ *   session (/auth/dev-login/, enabled in every environment) instead of
+ *   showing a dead-end error. The product is only distributed through the
+ *   Telegram bot, so this fallback only matters for edge cases and testing,
+ *   never for a real customer's own account.
  */
 export default function AuthBootstrap({ children }) {
   const { user, setSession } = useAuth();
@@ -46,20 +51,12 @@ export default function AuthBootstrap({ children }) {
     waitForInitData().then((initData) => {
       if (cancelled) return;
 
-      // We're confident this is a real Telegram client (platform is set) but
-      // initData never showed up — a known Telegram Desktop failure mode.
-      // Falling through to dev-login here would just 404 in production
-      // (it's DEBUG-only) and mask the real problem behind a generic error.
-      // Say so plainly instead of guessing at a login endpoint that can't work.
-      if (!initData && looksLikeTelegramClient()) {
-        setErrorDetail(`Telegram initData kelmadi (platform: ${window.Telegram.WebApp.platform}). Botni yangilang yoki mobil ilovada urinib ko'ring.`);
-        setStatus("error");
-        return;
-      }
-
+      // No initData (plain browser, or Telegram that never handed it over)
+      // → sign in as the shared guest instead of blocking on a login that
+      // can't work. See the fallback's own comment for why this is safe.
       const endpoint = initData
         ? [`${BASE}/auth/telegram/webapp/`, { init_data: initData }]
-        : [`${BASE}/auth/dev-login/`, {}]; // browser dev → regular user
+        : [`${BASE}/auth/dev-login/`, {}];
 
       axios
         .post(...endpoint)

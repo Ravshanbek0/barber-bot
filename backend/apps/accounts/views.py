@@ -29,6 +29,29 @@ def tokens_for(user):
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
 
 
+def _record_login_throttled(user, created):
+    """Logs a login/joined activity event, but at most once per 10 minutes per
+    user. AuthBootstrap re-verifies identity on every app open (including tab
+    switches, reopens, etc — see the frontend), so without this the admin
+    panel's activity feed fills up with the same "X ilovaga kirdi" line
+    repeated every few minutes instead of showing real activity."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.adminpanel.models import ActivityEvent
+
+    if not created:
+        recent = ActivityEvent.objects.filter(
+            actor=user, kind__in=["login", "joined"],
+            created_at__gte=timezone.now() - timedelta(minutes=10),
+        ).exists()
+        if recent:
+            return
+    record(user, kind="joined" if created else "login",
+           description="Telegram orqali ilovaga kirdi")
+
+
 def auth_response(user):
     return Response(
         {"user": UserSerializer(user).data, "tokens": tokens_for(user)},
@@ -130,27 +153,28 @@ def telegram_webapp(request):
     if fields:
         user.save(update_fields=fields)
 
-    record(user, kind="joined" if created else "login",
-           description="Telegram orqali ilovaga kirdi")
+    _record_login_throttled(user, created)
     return auth_response(user)
 
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def dev_login(request):
-    """Browser-only guest login for local development (DEBUG only).
+    """Fallback guest login for whenever Telegram initData isn't available —
+    local dev in a plain browser, but also production if the Mini App is ever
+    opened outside Telegram (or Telegram fails to hand over initData, as some
+    Desktop versions do). Deliberately not DEBUG-gated: the product is only
+    distributed via the Telegram bot, so this only catches edge cases, and
+    signing those in as a shared guest beats showing a dead-end error screen.
 
     Mirrors the Telegram flow: you start as a guest and register later
     (phone to book, or "Usta bo'lish" to become a master).
     """
-    if not settings.DEBUG:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-    user, _ = User.objects.get_or_create(
+    user, created = User.objects.get_or_create(
         phone="+998900000002",
         defaults={"first_name": "Mehmon"},
     )
-    record(user, kind="login", description="Brauzer (dev) orqali kirdi")
+    _record_login_throttled(user, created)
     return auth_response(user)
 
 

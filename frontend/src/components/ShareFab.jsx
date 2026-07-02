@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { api } from "../api/client";
 import { useAuth } from "../store/auth";
@@ -17,9 +18,13 @@ const BOT = import.meta.env.VITE_TELEGRAM_BOT || "barberC_bot";
  */
 export default function ShareFab() {
   const isMaster = useAuth((s) => !!s.user?.is_master);
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [copied, setCopied] = useState(false);
+  // An open chat thread has its own send button in this same bottom-right
+  // corner — the floating QR button was sitting right on top of it.
+  const inChatThread = /^\/chat\/.+/.test(location.pathname);
 
   // Load the handle/name once we know this is a master, so the QR is ready the
   // instant they tap. Silently ignore failures — the button just won't render.
@@ -34,7 +39,7 @@ export default function ShareFab() {
 
   const handle = profile?.handle;
   const link = handle ? `https://t.me/${BOT}?start=${handle}` : "";
-  if (!isMaster || !link) return null;
+  if (!isMaster || !link || inChatThread) return null;
 
   const toggle = () => { haptic("light"); setOpen((v) => !v); };
 
